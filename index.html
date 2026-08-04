@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#7b2ff7">
+<title>Helix Drop — Premium Helix Jump</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Ambient animated background shared by every screen -->
+<div class="bg-scene" aria-hidden="true">
+  <div class="bg-gradient"></div>
+  <div class="light-ray ray1"></div>
+  <div class="light-ray ray2"></div>
+  <div class="light-ray ray3"></div>
+  <div class="particles" id="bgParticles"></div>
+</div>
+
+<div id="app">
+
+  <!-- ============ SPLASH SCREEN ============ -->
+  <section id="screen-splash" class="screen active">
+    <div class="splash-wrap">
+      <div class="logo-orb">
+        <div class="logo-orb-core"></div>
+        <div class="logo-orb-ring"></div>
+      </div>
+      <h1 class="game-title">HELIX <span>DROP</span></h1>
+      <p class="tagline" data-i18n="tagline">Spin. Fall. Fly.</p>
+      <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+      <p class="loader-text" id="loaderText">Loading…</p>
+    </div>
+  </section>
+
+  <!-- ============ MAIN MENU ============ -->
+  <section id="screen-menu" class="screen">
+    <div class="glass-panel menu-panel">
+      <h1 class="brand">HELIX <span>DROP</span></h1>
+
+      <div class="stat-row">
+        <div class="pill coin-pill">🪙 <span id="menuCoins">0</span></div>
+        <div class="pill score-pill">🏆 <span id="menuHigh">0</span></div>
+      </div>
+
+      <button class="btn btn-primary big" id="btnPlay" data-i18n="play">▶ PLAY</button>
+
+      <div class="menu-grid">
+        <button class="btn btn-glass" id="btnLevels">🗺️ <span data-i18n="levels">Levels</span></button>
+        <button class="btn btn-glass" id="btnShop">🎨 <span data-i18n="ballShop">Ball Shop</span></button>
+        <button class="btn btn-glass" id="btnThemes">🏙️ <span data-i18n="themes">Themes</span></button>
+        <button class="btn btn-glass" id="btnStats">📊 <span data-i18n="stats">Stats</span></button>
+        <button class="btn btn-glass" id="btnDaily">🎁 <span data-i18n="daily">Daily</span></button>
+        <button class="btn btn-glass" id="btnSettings">⚙️ <span data-i18n="settings">Settings</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LEVEL SELECT ============ -->
+  <section id="screen-levels" class="screen">
+    <div class="glass-panel">
+      <div class="panel-header">
+        <button class="btn-back" data-back="screen-menu">←</button>
+        <h2 data-i18n="selectLevel">Select Level</h2>
+      </div>
+      <div class="level-list" id="levelList"></div>
+    </div>
+  </section>
+
+  <!-- ============ BALL SHOP ============ -->
+  <section id="screen-shop" class="screen">
+    <div class="glass-panel">
+      <div class="panel-header">
+        <button class="btn-back" data-back="screen-menu">←</button>
+        <h2 data-i18n="ballShop">Ball Shop</h2>
+        <div class="pill coin-pill small">🪙 <span id="shopCoins">0</span></div>
+      </div>
+      <div class="item-grid" id="ballGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ THEME SELECT ============ -->
+  <section id="screen-themes" class="screen">
+    <div class="glass-panel">
+      <div class="panel-header">
+        <button class="btn-back" data-back="screen-menu">←</button>
+        <h2 data-i18n="themes">Tower Themes</h2>
+        <div class="pill coin-pill small">🪙 <span id="themeCoins">0</span></div>
+      </div>
+      <div class="item-grid" id="themeGrid"></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="screen-settings" class="screen">
+    <div class="glass-panel">
+      <div class="panel-header">
+        <button class="btn-back" data-back="screen-menu">←</button>
+        <h2 data-i18n="settings">Settings</h2>
+      </div>
+      <div class="settings-list">
+        <div class="setting-row">
+          <span data-i18n="music">Music</span>
+          <label class="switch"><input type="checkbox" id="toggleMusic"><span class="slider-toggle"></span></label>
+        </div>
+        <div class="setting-row">
+          <span data-i18n="sound">Sound Effects</span>
+          <label class="switch"><input type="checkbox" id="toggleSound"><span class="slider-toggle"></span></label>
+        </div>
+        <div class="setting-row">
+          <span data-i18n="vibration">Vibration</span>
+          <label class="switch"><input type="checkbox" id="toggleVibration"><span class="slider-toggle"></span></label>
+        </div>
+        <div class="setting-row column">
+          <span data-i18n="graphics">Graphics Quality</span>
+          <div class="segmented" id="graphicsSeg">
+            <button data-val="low" data-i18n="low">Low</button>
+            <button data-val="medium" data-i18n="medium">Medium</button>
+            <button data-val="high" data-i18n="high">High</button>
+          </div>
+        </div>
+        <div class="setting-row column">
+          <span data-i18n="sensitivity">Sensitivity</span>
+          <input type="range" min="0.5" max="2" step="0.05" id="sliderSensitivity" class="range">
+        </div>
+        <div class="setting-row column">
+          <span data-i18n="brightness">Brightness</span>
+          <input type="range" min="0.6" max="1.3" step="0.02" id="sliderBrightness" class="range">
+        </div>
+        <div class="setting-row column">
+          <span data-i18n="language">Language</span>
+          <div class="segmented" id="langSeg">
+            <button data-val="en">EN</button>
+            <button data-val="es">ES</button>
+            <button data-val="hi">HI</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DAILY REWARD ============ -->
+  <section id="screen-daily" class="screen">
+    <div class="glass-panel daily-panel">
+      <div class="panel-header">
+        <button class="btn-back" data-back="screen-menu">←</button>
+        <h2 data-i18n="dailyReward">Daily Reward</h2>
+      </div>
+      <div class="daily-chest" id="dailyChest">🎁</div>
+      <p class="daily-msg" id="dailyMsg">Come back tomorrow for more coins!</p>
+      <button class="btn btn-primary" id="btnClaimDaily" data-i18n="claim">CLAIM 50 🪙</button>
+    </div>
+  </section>
+
+  <!-- ============ STATISTICS ============ -->
+  <section id="screen-stats" class="screen">
+    <div class="glass-panel">
+      <div class="panel-header">
+        <button class="btn-back" data-back="screen-menu">←</button>
+        <h2 data-i18n="stats">Statistics</h2>
+      </div>
+      <div class="stats-grid" id="statsGrid"></div>
+      <h3 class="section-title" data-i18n="achievements">Achievements</h3>
+      <div class="achv-list" id="achvList"></div>
+    </div>
+  </section>
+
+  <!-- ============ GAMEPLAY ============ -->
+  <section id="screen-game" class="screen">
+    <div id="gameCanvasWrap">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- HUD -->
+      <div class="hud">
+        <button class="hud-btn" id="btnPause">❚❚</button>
+        <div class="hud-score">
+          <div class="hud-depth" id="hudDepth">0m</div>
+          <div class="hud-best" id="hudBest">Best 0m</div>
+        </div>
+        <div class="hud-coins">🪙 <span id="hudCoins">0</span></div>
+      </div>
+
+      <div class="combo-popup" id="comboPopup">COMBO ×2</div>
+    </div>
+  </section>
+
+  <!-- ============ PAUSE OVERLAY ============ -->
+  <div id="overlay-pause" class="overlay">
+    <div class="glass-panel overlay-panel">
+      <h2 data-i18n="paused">Paused</h2>
+      <button class="btn btn-primary" id="btnResume" data-i18n="resume">▶ Resume</button>
+      <button class="btn btn-glass" id="btnRestartFromPause" data-i18n="restart">⟲ Restart</button>
+      <button class="btn btn-glass" id="btnQuitToMenu" data-i18n="quit">🏠 Main Menu</button>
+    </div>
+  </div>
+
+  <!-- ============ GAME OVER OVERLAY ============ -->
+  <div id="overlay-gameover" class="overlay">
+    <div class="glass-panel overlay-panel">
+      <h2 class="go-title" data-i18n="gameOver">Game Over</h2>
+      <div class="go-stats">
+        <div class="go-stat"><span id="goDepth">0</span>m <small data-i18n="depth">depth</small></div>
+        <div class="go-stat">🪙 <span id="goCoins">0</span></div>
+      </div>
+      <p class="go-best" id="goBestMsg"></p>
+      <button class="btn btn-primary" id="btnRestartFromGO" data-i18n="playAgain">⟲ Play Again</button>
+      <button class="btn btn-glass" id="btnMenuFromGO" data-i18n="quit">🏠 Main Menu</button>
+    </div>
+  </div>
+
+  <!-- ============ VICTORY OVERLAY ============ -->
+  <div id="overlay-victory" class="overlay">
+    <div class="glass-panel overlay-panel">
+      <h2 class="victory-title" data-i18n="levelComplete">🎉 Level Complete!</h2>
+      <div class="go-stats">
+        <div class="go-stat">🪙 <span id="vicCoins">0</span></div>
+        <div class="go-stat">⭐ <span id="vicStars">☆☆☆</span></div>
+      </div>
+      <button class="btn btn-primary" id="btnNextLevel" data-i18n="nextLevel">Next Level →</button>
+      <button class="btn btn-glass" id="btnMenuFromVic" data-i18n="quit">🏠 Main Menu</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
