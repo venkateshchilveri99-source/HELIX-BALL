@@ -1,5 +1,5 @@
 /* =========================================================
-   HELIX STACK BALL ENGINE — Fully Corrected & Updated Script
+   HELIX STACK BALL ENGINE — Fixed Rod Rotation & Passive Bouncing
    ========================================================= */
 
 // --- GLOBAL GAME STATE ---
@@ -659,9 +659,7 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-/* =========================================================
-   UPDATED POINTER & TOUCH CONTROLS
-   ========================================================= */
+// --- FIXED TOUCH & INPUT CONTROLS ---
 let isDragging = false;
 let previousPointerX = 0;
 
@@ -812,11 +810,12 @@ function startGame() {
   updateHUD();
 }
 
-/* =========================================================
-   UPDATED PHYSICS & COLLISION ENGINE
-   ========================================================= */
+// --- FIXED PHYSICS & ROD ROTATION ENGINE ---
 function updatePhysics() {
   if (!state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
+
+  // FIXED: Continuous central rod/tower rotation
+  towerGroup.rotation.y += 0.005;
 
   if (state.isPressing) {
     ballVelocityY = SMASH_SPEED;
@@ -842,7 +841,7 @@ function updatePhysics() {
         continue;
       }
 
-      // SMASHING OR FEVER MODE
+      // SMASHING / DOWNWARD SMASH
       if (state.isPressing || state.fireMode) {
         if (slice.isDanger && !state.fireMode) {
           triggerGameOver();
@@ -874,7 +873,7 @@ function updatePhysics() {
           return;
         }
       } 
-      // PASSIVE BOUNCE (NOT PRESSING)
+      // FIXED: PASSIVE BOUNCE MECHANIC
       else {
         if (slice.isDanger) {
           triggerGameOver();
