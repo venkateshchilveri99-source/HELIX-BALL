@@ -165,10 +165,10 @@ let towerGroup, ballMesh;
 let stackPlatforms = [];
 let particles = [];
 
-// Physics & Mechanics Parameters
-const GRAVITY = -0.012;
-const SMASH_SPEED = -0.32;
-const BOUNCE_IMPULSE = 0.22;
+// Physics & Mechanics Parameters (Scaled to Medium Speed)
+const GRAVITY = -0.007;
+const SMASH_SPEED = -0.18;
+const BOUNCE_IMPULSE = 0.14;
 const BALL_RADIUS = 0.35;
 const TOWER_RADIUS = 1.6;
 const LAYER_HEIGHT = 0.35;
@@ -205,7 +205,6 @@ function switchScreen(screenId) {
     target.classList.add('active');
   }
   
-  // If loading menus, update statistics or list states
   if (screenId === 'screen-menu') {
     updateMenuStats();
   } else if (screenId === 'screen-shop') {
@@ -247,7 +246,6 @@ function translatePage() {
       if (el.tagName === 'INPUT' && el.type === 'button') {
         el.value = dict[key];
       } else {
-        // preserve emojis if possible
         const text = dict[key];
         el.textContent = text;
       }
@@ -270,7 +268,6 @@ function renderLevels() {
   if (!container) return;
   container.innerHTML = '';
   
-  // Show 10 levels
   for (let i = 1; i <= 10; i++) {
     const isLocked = i > state.highestLevel;
     const card = document.createElement('div');
@@ -309,7 +306,6 @@ function renderShop() {
     const card = document.createElement('div');
     card.className = `item-card ${isSelected ? 'selected' : ''}`;
     
-    // Convert hex color to CSS background
     const hexStr = '#' + skin.color.toString(16).padStart(6, '0');
     
     card.innerHTML = `
@@ -356,8 +352,6 @@ function renderThemes() {
     const card = document.createElement('div');
     card.className = `item-card ${isSelected ? 'selected' : ''}`;
     
-    const safeHex = '#' + theme.safeColor.toString(16).padStart(6, '0');
-    
     card.innerHTML = `
       <div class="item-preview-theme" style="background: linear-gradient(135deg, ${theme.sky}, ${theme.pink})"></div>
       <div class="item-name">${theme.name}</div>
@@ -377,7 +371,6 @@ function renderThemes() {
 
 // --- UPDATE TOWER THEME ---
 function updateTowerTheme() {
-  // Update ambient background styling dynamically
   const activeTheme = TOWER_THEMES[state.selectedTheme] || TOWER_THEMES[0];
   const bgGrad = document.querySelector('.bg-gradient');
   if (bgGrad) {
@@ -401,7 +394,6 @@ function renderStatsPage() {
   if (totalCoins) totalCoins.textContent = state.coins;
   if (highestLevel) highestLevel.textContent = state.highestLevel;
 
-  // Toggle unlocked achievements
   const achv1 = document.getElementById('achv-1');
   const achv2 = document.getElementById('achv-2');
   const achv3 = document.getElementById('achv-3');
@@ -434,12 +426,10 @@ function loadSettingsPage() {
   if (sensSlider) sensSlider.value = state.sensitivity;
   if (brightSlider) brightSlider.value = state.brightness;
 
-  // Toggle graphics active class
   document.querySelectorAll('#graphicsSeg button').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-val') === state.graphics);
   });
 
-  // Toggle language active class
   document.querySelectorAll('#langSeg button').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-val') === state.lang);
   });
@@ -447,11 +437,9 @@ function loadSettingsPage() {
 
 // --- INIT UI EVENT HANDLERS ---
 function initUI() {
-  // Use generic helper to bind clicks securely without overlapping
   const bindClick = (id, handler) => {
     const el = document.getElementById(id);
     if (el) {
-      // Clear previous listeners by replacing node or standard binding
       el.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -460,7 +448,6 @@ function initUI() {
     }
   };
 
-  // Bind Menu screen navigation buttons
   bindClick('btnPlay', startGame);
   bindClick('btnLevels', () => switchScreen('screen-levels'));
   bindClick('btnShop', () => switchScreen('screen-shop'));
@@ -469,7 +456,6 @@ function initUI() {
   bindClick('btnDaily', () => switchScreen('screen-daily'));
   bindClick('btnSettings', () => switchScreen('screen-settings'));
 
-  // Bind generic back buttons
   document.querySelectorAll('.btn-back').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -478,7 +464,6 @@ function initUI() {
     });
   });
 
-  // Bind Pause, HUD buttons
   bindClick('btnPause', () => {
     if (!state.isPlaying) return;
     state.isPaused = true;
@@ -503,7 +488,6 @@ function initUI() {
     switchScreen('screen-menu');
   });
 
-  // Bind Game Over overlay
   bindClick('btnRestartFromGO', () => {
     hideOverlays();
     startGame();
@@ -514,7 +498,6 @@ function initUI() {
     switchScreen('screen-menu');
   });
 
-  // Bind Victory overlay
   bindClick('btnNextLevel', () => {
     state.currentLevel++;
     if (state.currentLevel > state.highestLevel) {
@@ -530,7 +513,6 @@ function initUI() {
     switchScreen('screen-menu');
   });
 
-  // Settings screen interactive elements
   const musicChk = document.getElementById('toggleMusic');
   if (musicChk) {
     musicChk.addEventListener('change', () => {
@@ -580,7 +562,6 @@ function initUI() {
       state.graphics = btn.getAttribute('data-val');
       localStorage.setItem('helix_graphics', state.graphics);
       
-      // Update three.js pixel ratio for performance
       if (renderer) {
         if (state.graphics === 'low') renderer.setPixelRatio(0.75);
         else if (state.graphics === 'medium') renderer.setPixelRatio(1);
@@ -599,13 +580,11 @@ function initUI() {
     });
   });
 
-  // Daily Reward chest claim logic
   bindClick('btnClaimDaily', () => {
     const claimBtn = document.getElementById('btnClaimDaily');
     const lastClaim = parseInt(localStorage.getItem('helix_last_claim') || '0');
     const now = Date.now();
     
-    // 24h limit (86400000 ms)
     if (now - lastClaim >= 86400000) {
       state.coins += 50;
       state.totalCoins += 50;
@@ -624,7 +603,6 @@ function initUI() {
     }
   });
 
-  // Initial load brightness & theme background
   document.getElementById('app').style.filter = `brightness(${state.brightness})`;
   updateTowerTheme();
 }
@@ -654,7 +632,6 @@ function initThree() {
   else if (state.graphics === 'medium') renderer.setPixelRatio(1);
   else renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-  // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
   scene.add(ambientLight);
 
@@ -662,11 +639,9 @@ function initThree() {
   dirLight.position.set(5, 15, 8);
   scene.add(dirLight);
 
-  // Tower Container
   towerGroup = new THREE.Group();
   scene.add(towerGroup);
 
-  // Ball
   const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
   const ballMat = new THREE.MeshStandardMaterial({
     roughness: 0.1,
@@ -697,15 +672,11 @@ function setupTouchAndInput() {
 
   canvas.addEventListener('pointerdown', (e) => {
     if (!state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
-    
-    // Only capture if clicking on the gameplay area, not HUD
     if (e.target.closest('.hud-btn') || e.target.closest('.hud-coins')) return;
 
     isDragging = true;
     previousPointerX = e.clientX;
     pointerMoved = 0;
-    
-    // Pressing down starts the smashing mechanism
     state.isPressing = true;
   });
 
@@ -716,11 +687,9 @@ function setupTouchAndInput() {
     previousPointerX = e.clientX;
     pointerMoved += Math.abs(deltaX);
 
-    // Rotate tower relative to pointer movements & sensitivity setting
     const rotSensitivity = 0.006 * state.sensitivity;
     towerGroup.rotation.y -= deltaX * rotSensitivity;
 
-    // If drag threshold exceeded, cancel smashing hold
     if (pointerMoved > 8) {
       state.isPressing = false;
     }
@@ -737,7 +706,6 @@ function setupTouchAndInput() {
 
 // --- BUILD STACK TOWER ---
 function buildStackTower() {
-  // Clear any existing geometries/materials
   while (towerGroup.children.length > 0) {
     const obj = towerGroup.children[0];
     towerGroup.remove(obj);
@@ -746,21 +714,19 @@ function buildStackTower() {
   }
   stackPlatforms = [];
 
-  // Center Shaft (Pole)
   const poleGeo = new THREE.CylinderGeometry(0.7, 0.7, TOTAL_LAYERS * LAYER_HEIGHT + 10, 32);
   const poleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
   const pole = new THREE.Mesh(poleGeo, poleMat);
   pole.position.y = -(TOTAL_LAYERS * LAYER_HEIGHT) / 2;
   towerGroup.add(pole);
 
-  // Active theme settings
   const currentTheme = TOWER_THEMES[state.selectedTheme] || TOWER_THEMES[0];
   const safeColor = currentTheme.safeColor;
   const dangerColor = currentTheme.dangerColor;
 
   for (let i = 0; i < TOTAL_LAYERS; i++) {
     const posY = -i * LAYER_HEIGHT;
-    const rotationY = i * 0.18; // offset angles for each step
+    const rotationY = i * 0.18;
     const isBase = (i === TOTAL_LAYERS - 1);
 
     const layerGroup = new THREE.Group();
@@ -770,15 +736,12 @@ function buildStackTower() {
     const sliceCount = 12;
     const slices = [];
 
-    // Skip building slices on random holes for high levels to offer variety
     const holeIndex1 = i > 0 ? Math.floor(Math.random() * sliceCount) : -1;
     const holeIndex2 = i > 0 ? (holeIndex1 + 1) % sliceCount : -1;
 
     for (let j = 0; j < sliceCount; j++) {
-      // Empty spaces / holes
       if (j === holeIndex1 || j === holeIndex2) continue;
 
-      // Determine deadly sectors (cannot be on base level)
       const isDanger = !isBase && (j % 5 === 0 || j % 5 === 1);
 
       const angleStart = (j / sliceCount) * Math.PI * 2;
@@ -801,8 +764,6 @@ function buildStackTower() {
       };
 
       const sliceGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-      
-      // Face geometry upwards
       sliceGeo.rotateX(-Math.PI / 2);
 
       const sliceMat = new THREE.MeshStandardMaterial({
@@ -845,19 +806,15 @@ function startGame() {
   state.isPaused = false;
   state.totalGames++;
 
-  // Update localStorage stats
   saveToStorage();
 
   ballPosY = 1.0;
   ballVelocityY = 0;
   
-  // Align ball style colors
   updateBallMaterial();
   ballMesh.position.set(0, ballPosY, TOWER_RADIUS - 0.3);
 
   buildStackTower();
-  
-  // Set UI screen to game view
   switchScreen('screen-game');
   updateHUD();
 }
@@ -873,30 +830,26 @@ function updatePhysics() {
 
   ballPosY += ballVelocityY;
 
-  // Tiny idle rotate animation on tower
   towerGroup.rotation.y += 0.005;
 
-  // Smooth Camera following ball movements
   camera.position.y = ballPosY + 3.2;
   camera.lookAt(0, ballPosY - 0.5, 0);
 
   ballMesh.position.y = ballPosY;
 
-  // Platform collision handler
   for (let i = 0; i < stackPlatforms.length; i++) {
     const layer = stackPlatforms[i];
     if (layer.destroyed) continue;
 
-    const diffY = ballPosY - layer.posY;
-
-    // Check if the ball's bottom intersects the platform surface
     if (ballVelocityY <= 0 && (ballPosY - BALL_RADIUS) <= layer.posY && (ballPosY - BALL_RADIUS) >= layer.posY - LAYER_HEIGHT) {
       
+      const slice = getSliceUnderBall(layer);
+      if (!slice) {
+        continue;
+      }
+      
       if (state.isPressing || state.fireMode) {
-        const hitDanger = checkDangerHit(layer);
-
-        // Game Over condition if hitting danger segments outside Fire Invincibility
-        if (hitDanger && !state.fireMode) {
+        if (slice.isDanger && !state.fireMode) {
           triggerGameOver();
           return;
         }
@@ -906,13 +859,11 @@ function updatePhysics() {
         state.fireStreak++;
         state.totalSmashed++;
 
-        // Visual effects for Fire/Fever Mode
         if (state.fireStreak >= 8) {
           state.fireMode = true;
           ballMesh.material.color.setHex(0xff3300);
           ballMesh.material.emissive.setHex(0x550000);
           
-          // Show combo popup
           const combo = document.getElementById('comboPopup');
           if (combo) {
             combo.textContent = `FEVER MODE ×${Math.floor(state.fireStreak / 4)}`;
@@ -923,22 +874,22 @@ function updatePhysics() {
 
         updateHUD();
 
-        // Check level base victory trigger
         if (layer.isBase) {
           triggerVictory();
           return;
         }
       } else {
-        // Safe bouncing mechanics
+        if (slice.isDanger) {
+          triggerGameOver();
+          return;
+        }
+
         ballPosY = layer.posY + BALL_RADIUS;
         ballVelocityY = BOUNCE_IMPULSE;
         state.fireStreak = 0;
         state.fireMode = false;
         
-        // Revert ball color back to selection
         updateBallMaterial();
-        
-        // Play bounce effect particle burst
         createBounceBurst(ballMesh.position.y);
       }
       break;
@@ -948,32 +899,27 @@ function updatePhysics() {
   updateParticles();
 }
 
-// --- CORRECTED DANGER SECTOR DETECTION ---
-function checkDangerHit(layer) {
-  // Sum cumulative angle of global tower rotation and individual layer rotation
+function getSliceUnderBall(layer) {
   const totalRotation = towerGroup.rotation.y + layer.group.rotation.y;
-
-  // Ball is located on front (+Z axis, Math.PI / 2 angle)
-  let angleNorm = (totalRotation - Math.PI / 2) % (Math.PI * 2);
+  let angleNorm = (-totalRotation - Math.PI / 2) % (Math.PI * 2);
   if (angleNorm < 0) angleNorm += Math.PI * 2;
 
   const sliceCount = 12;
   const sliceAngle = (Math.PI * 2) / sliceCount;
 
-  // Determine segment index currently under the ball
   const index = Math.floor(angleNorm / sliceAngle) % sliceCount;
 
-  // Match corresponding slice
-  const matchedSlice = layer.slices.find(s => {
-    // Find the slice whose starting angle matches the relative index
+  return layer.slices.find(s => {
     const sIdx = Math.round(s.angleStart / sliceAngle) % sliceCount;
     return sIdx === index;
   });
-
-  return matchedSlice ? matchedSlice.isDanger : false;
 }
 
-// --- TOWER SHATTER ANIMATION ---
+function checkDangerHit(layer) {
+  const slice = getSliceUnderBall(layer);
+  return slice ? slice.isDanger : false;
+}
+
 function shatterStackLayer(layer) {
   layer.destroyed = true;
 
@@ -982,7 +928,6 @@ function shatterStackLayer(layer) {
     const pGeo = mesh.geometry.clone();
     const pMat = mesh.material.clone();
     
-    // Enable blending for fade-outs
     pMat.transparent = true;
     pMat.opacity = 1.0;
     
@@ -991,7 +936,6 @@ function shatterStackLayer(layer) {
     p.position.copy(layer.group.position);
     p.rotation.copy(layer.group.rotation);
 
-    // Dynamic velocities for shattered shards
     p.userData = {
       vx: (Math.random() - 0.5) * 0.15,
       vy: Math.random() * 0.15 + 0.1,
@@ -1008,7 +952,6 @@ function shatterStackLayer(layer) {
   towerGroup.remove(layer.group);
 }
 
-// --- BOUNCE PARTICLES ---
 function createBounceBurst(posY) {
   const colors = [0xffffff, 0x00d2ff, 0x00ffff];
   const activeColor = colors[Math.floor(Math.random() * colors.length)];
@@ -1051,11 +994,9 @@ function updateParticles() {
     p.rotation.x += p.userData.rotX || 0;
     p.rotation.y += p.userData.rotY || 0;
 
-    // Apply basic gravity to particles
     p.userData.vy -= 0.008;
     p.userData.life--;
     
-    // Smoothly fade out transparency
     if (p.material) {
       p.material.opacity = Math.max(0, p.userData.life / 30);
     }
@@ -1069,7 +1010,6 @@ function updateParticles() {
   }
 }
 
-// --- HUD DISPLAY UPDATES ---
 function updateHUD() {
   const depthEl = document.getElementById('hudDepth');
   const coinsEl = document.getElementById('hudCoins');
@@ -1080,7 +1020,6 @@ function updateHUD() {
   if (bestEl) bestEl.textContent = `Best ${state.highScore}m`;
 }
 
-// --- SCREEN OVERLAYS TRIGGER ---
 function triggerGameOver() {
   state.isPlaying = false;
   state.isGameOver = true;
@@ -1089,7 +1028,6 @@ function triggerGameOver() {
     state.highScore = state.score;
   }
   
-  // Calculate reward coins
   const earnedCoins = Math.floor(state.score / 10);
   state.coins += earnedCoins;
   state.totalCoins += earnedCoins;
@@ -1116,7 +1054,6 @@ function triggerVictory() {
     state.highScore = state.score + 100;
   }
 
-  // Bonus coins for levels completed
   const prize = 50 + state.currentLevel * 10;
   state.coins += prize;
   state.totalCoins += prize;
@@ -1138,7 +1075,6 @@ function triggerVictory() {
   document.getElementById('overlay-victory').classList.add('active');
 }
 
-// --- ANIMATION / RENDER CYCLE ---
 function animate() {
   requestAnimationFrame(animate);
   updatePhysics();
