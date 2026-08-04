@@ -1,15 +1,5 @@
 /* =========================================================================
    HELIX DROP — script.js
-   Vanilla JS Helix-Jump style game. No external libraries.
-   Sections:
-     1. i18n & translations
-     2. Persistent profile (localStorage)
-     3. Audio engine (WebAudio synth — no external sound files)
-     4. Data: levels, ball skins, tower themes, achievements
-     5. Screen / navigation manager
-     6. UI builders (menus, shop, settings, stats, daily reward)
-     7. Game engine (tower, ball, physics, rendering, input, particles)
-     8. Boot sequence
    ========================================================================= */
 
 (() => {
@@ -41,6 +31,7 @@ const I18N = {
     resume:"▶ जारी रखें", restart:"⟲ पुनः आरंभ", quit:"🏠 मुख्य मेनू", gameOver:"खेल समाप्त", depth:"गहराई",
     playAgain:"⟲ फिर खेलें", levelComplete:"🎉 स्तर पूर्ण!", nextLevel:"अगला स्तर →" },
 };
+
 function applyLanguage(lang){
   const dict = I18N[lang] || I18N.en;
   document.querySelectorAll("[data-i18n]").forEach(el=>{
@@ -71,7 +62,9 @@ const defaultProfile = () => ({
     sensitivity:1, brightness:1, language:"en"
   }
 });
+
 let profile = loadProfile();
+
 function loadProfile(){
   try{
     const raw = localStorage.getItem(SAVE_KEY);
@@ -84,12 +77,13 @@ function loadProfile(){
     });
   }catch(e){ return defaultProfile(); }
 }
+
 function saveProfile(){
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify(profile)); }catch(e){/* storage unavailable */}
 }
 
 /* ========================================================================
-   3. AUDIO ENGINE — synthesized, no external files
+   3. AUDIO ENGINE
    ======================================================================== */
 const Audio_ = (() => {
   let ctx = null;
@@ -197,9 +191,6 @@ function showScreen(id){
 }
 function showOverlay(id){ document.getElementById(id).classList.add("active"); }
 function hideOverlay(id){ document.getElementById(id).classList.remove("active"); }
-document.querySelectorAll("[data-back]").forEach(btn=>{
-  btn.addEventListener("click", ()=>{ Audio_.sfx.click(); showScreen(btn.getAttribute("data-back")); });
-});
 
 /* ========================================================================
    6. UI BUILDERS
@@ -209,7 +200,7 @@ function refreshCoinDisplays(){
   document.getElementById("shopCoins").textContent = profile.coins;
   document.getElementById("themeCoins").textContent = profile.coins;
   document.getElementById("hudCoins").textContent = runStats.coinsThisRun;
-  document.getElementById("menuHigh").textContent = Math.max(...Object.values(profile.highScores));
+  document.getElementById("menuHigh").textContent = Math.max(0, ...Object.values(profile.highScores));
 }
 
 function buildLevelList(){
@@ -306,7 +297,7 @@ function buildThemeGrid(){
 function buildStats(){
   const grid = document.getElementById("statsGrid");
   const s = profile;
-  const best = Math.max(...Object.values(s.highScores));
+  const best = Math.max(0, ...Object.values(s.highScores));
   grid.innerHTML = `
     <div class="stat-box"><b>${s.gamesPlayed}</b><span>Games Played</span></div>
     <div class="stat-box"><b>${best}m</b><span>Best Depth</span></div>
@@ -346,76 +337,34 @@ function buildDailyScreen(){
   const btn = document.getElementById("btnClaimDaily");
   const msg = document.getElementById("dailyMsg");
   btn.disabled = claimed;
-  btn.style.opacity = claimed ? 0.45 : 1;
+  btn.style.opacity = claimed ? "0.45" : "1";
   msg.textContent = claimed ? "You've claimed today's reward. Come back tomorrow!" : "Claim your free coins for today!";
 }
-
-/* ---- settings event bindings ---- */
-document.getElementById("toggleMusic").addEventListener("change", e=>{
-  profile.settings.music = e.target.checked; saveProfile();
-  if(e.target.checked) Audio_.startMusic(); else Audio_.stopMusic();
-});
-document.getElementById("toggleSound").addEventListener("change", e=>{ profile.settings.sound = e.target.checked; saveProfile(); });
-document.getElementById("toggleVibration").addEventListener("change", e=>{ profile.settings.vibration = e.target.checked; saveProfile(); });
-document.getElementById("sliderSensitivity").addEventListener("input", e=>{ profile.settings.sensitivity = parseFloat(e.target.value); saveProfile(); });
-document.getElementById("sliderBrightness").addEventListener("input", e=>{
-  profile.settings.brightness = parseFloat(e.target.value); saveProfile();
-  document.documentElement.style.setProperty("--brightness", profile.settings.brightness);
-});
-document.querySelectorAll("#graphicsSeg button").forEach(b=>{
-  b.addEventListener("click", ()=>{
-    profile.settings.graphics = b.dataset.val; saveProfile(); buildSettingsUI(); Audio_.sfx.click();
-  });
-});
-document.querySelectorAll("#langSeg button").forEach(b=>{
-  b.addEventListener("click", ()=>{
-    profile.settings.language = b.dataset.val; saveProfile(); buildSettingsUI();
-    applyLanguage(profile.settings.language); buildStats(); Audio_.sfx.click();
-  });
-});
-document.getElementById("btnClaimDaily").addEventListener("click", ()=>{
-  const today = new Date().toDateString();
-  if(profile.lastDailyClaim === today) return;
-  profile.coins += 50; profile.totalCoinsEarned += 50; profile.lastDailyClaim = today;
-  saveProfile(); refreshCoinDisplays(); buildDailyScreen();
-  Audio_.sfx.coin(); Audio_.vibrate(40);
-});
-
-/* ---- menu navigation bindings ---- */
-document.getElementById("btnPlay").addEventListener("click", ()=>{ Audio_.sfx.click(); startGame(lastPlayedLevel || "easy"); });
-document.getElementById("btnLevels").addEventListener("click", ()=>{ Audio_.sfx.click(); buildLevelList(); showScreen("screen-levels"); });
-document.getElementById("btnShop").addEventListener("click", ()=>{ Audio_.sfx.click(); buildBallGrid(); showScreen("screen-shop"); });
-document.getElementById("btnThemes").addEventListener("click", ()=>{ Audio_.sfx.click(); buildThemeGrid(); showScreen("screen-themes"); });
-document.getElementById("btnStats").addEventListener("click", ()=>{ Audio_.sfx.click(); buildStats(); showScreen("screen-stats"); });
-document.getElementById("btnDaily").addEventListener("click", ()=>{ Audio_.sfx.click(); buildDailyScreen(); showScreen("screen-daily"); });
-document.getElementById("btnSettings").addEventListener("click", ()=>{ Audio_.sfx.click(); buildSettingsUI(); showScreen("screen-settings"); });
 
 /* ========================================================================
    7. GAME ENGINE
    ======================================================================== */
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+ let canvas, ctx;
 let cssW=0, cssH=0, dpr=1;
 
 function resizeCanvas(){
+  if(!canvas) return;
   cssW = window.innerWidth; cssH = window.innerHeight;
   dpr = Math.min(window.devicePixelRatio||1, 2);
   canvas.width = cssW*dpr; canvas.height = cssH*dpr;
   canvas.style.width = cssW+"px"; canvas.style.height = cssH+"px";
   ctx.setTransform(dpr,0,0,dpr,0,0);
 }
-window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
 
 const RING_SPACING = 92;
-const REF_ANGLE = Math.PI/2; // fixed collision reference angle (screen-front)
+const REF_ANGLE = Math.PI/2;
 const TWO_PI = Math.PI*2;
 function norm(a){ a = a % TWO_PI; if(a<0) a += TWO_PI; return a; }
 
 let lastPlayedLevel = null;
 let level = LEVELS[0];
 let rings = [];
-let ringCursor = 0; // next ring index to generate
+let ringCursor = 0;
 let ball, tower, cam, running=false, paused=false, rafId=null, lastTime=0;
 let particles = [];
 let runStats = { coinsThisRun:0, ringsCleared:0, comboSinceBounce:0, bestComboRun:0, screenShake:0 };
@@ -423,14 +372,11 @@ let inputState = { down:false, lastX:0, pointerId:null };
 let trailPositions = [];
 
 function getTowerRadius(){ return Math.min(cssW, cssH*1.3) * 0.26; }
-
 function currentSkin(){ return BALL_SKINS.find(s=>s.id===profile.selectedSkin) || BALL_SKINS[0]; }
 function currentTheme(){ return TOWER_THEMES.find(t=>t.id===profile.selectedTheme) || TOWER_THEMES[0]; }
 
-/* ---- Ring generation ---- */
 function difficultyForIndex(i){
   if(level.id !== "endless") return level;
-  // endless: scale difficulty gradually with depth, clamp
   const t = Math.min(i/120, 1);
   return {
     gapDeg: 118 - t*55,
@@ -439,13 +385,13 @@ function difficultyForIndex(i){
     bounce: level.bounce - t*1.6,
   };
 }
+
 function makeRing(i){
   const diff = difficultyForIndex(i);
   const gapRad = diff.gapDeg * Math.PI/180;
   const gapStart = Math.random()*TWO_PI;
   const gapEnd = gapStart + gapRad;
   const segments = [];
-  // remaining arc after the gap, split into normal / red segments
   let cursor = gapEnd;
   const remaining = TWO_PI - gapRad;
   const hasRed = Math.random() < diff.redChance;
@@ -465,10 +411,8 @@ function makeRing(i){
     resolved:false, gapMidAngle: (gapStart+gapEnd)/2,
   };
 }
+
 function segmentAt(ring, angle){
-  // angle is normalized to [0, 2π). Segment start/end may extend beyond 2π
-  // (used for wraparound arcs), so shift `angle` by full turns until it
-  // lands inside each segment's own range before testing.
   for(const seg of ring.segments){
     if(seg.end - seg.start >= TWO_PI) return seg;
     const lo = seg.start, hi = seg.end;
@@ -479,17 +423,16 @@ function segmentAt(ring, angle){
   }
   return ring.segments[ring.segments.length-1];
 }
+
 function ensureRingsAhead(){
   const ballIndex = Math.floor(ball.y / RING_SPACING);
   while(ringCursor < ballIndex + 16){
     rings.push(makeRing(ringCursor));
     ringCursor++;
   }
-  // drop rings well behind camera to keep array small
   while(rings.length && rings[0].index < ballIndex - 4) rings.shift();
 }
 
-/* ---- Particles ---- */
 function spawnParticles(x,y,color,count,opts={}){
   const q = profile.settings.graphics === "low" ? 0.4 : (profile.settings.graphics === "medium" ? 0.7 : 1);
   const n = Math.round(count*q);
@@ -503,6 +446,7 @@ function spawnParticles(x,y,color,count,opts={}){
     });
   }
 }
+
 function updateParticles(dt){
   for(let i=particles.length-1;i>=0;i--){
     const p = particles[i];
@@ -511,6 +455,7 @@ function updateParticles(dt){
     if(p.life >= p.maxLife) particles.splice(i,1);
   }
 }
+
 function drawParticles(){
   particles.forEach(p=>{
     const t = 1 - p.life/p.maxLife;
@@ -521,11 +466,9 @@ function drawParticles(){
   ctx.globalAlpha = 1;
 }
 
-/* ---- Game lifecycle ---- */
 function startGame(levelId){
   level = LEVELS.find(l=>l.id===levelId) || LEVELS[0];
   lastPlayedLevel = levelId;
-  const theme = currentTheme();
   rings = []; ringCursor = 0; particles = []; trailPositions = [];
   ball = { y:-160, vy:0, radius:15, squash:1 };
   tower = { rotation: Math.random()*TWO_PI };
@@ -574,7 +517,6 @@ function winGame(){
   profile.totalCoinsEarned += runStats.coinsThisRun;
   if(runStats.bestComboRun > profile.bestCombo) profile.bestCombo = runStats.bestComboRun;
   profile.highScores[level.id] = Math.max(profile.highScores[level.id]||0, runStats.ringsCleared);
-  // unlock next level
   const idx = LEVELS.findIndex(l=>l.id===level.id);
   if(idx>=0 && idx+1<LEVELS.length){
     const next = LEVELS[idx+1];
@@ -600,7 +542,6 @@ function runAchievementCheck(statCtx){
 
 function triggerShake(mag){ cam.shakeMag = Math.max(cam.shakeMag||0, mag); }
 
-/* ---- Physics / collision resolution ---- */
 function resolveRing(ring){
   ring.resolved = true;
   const originalAngle = norm(REF_ANGLE - tower.rotation);
@@ -624,7 +565,6 @@ function resolveRing(ring){
     }
     return;
   }
-  // normal platform -> bounce
   ball.vy = level.bounce ?? -11;
   ball.squash = 1.5;
   Audio_.sfx.bounce();
@@ -648,7 +588,6 @@ function showCombo(n){
   el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
 }
 
-/* ---- Input: pointer drag rotates tower; also basic keyboard ---- */
 function attachInput(){
   canvas.addEventListener("pointerdown", e=>{
     inputState.down = true; inputState.lastX = e.clientX; inputState.pointerId = e.pointerId;
@@ -663,7 +602,6 @@ function attachInput(){
   function up(e){ if(e.pointerId===inputState.pointerId){ inputState.down=false; inputState.pointerId=null; } }
   canvas.addEventListener("pointerup", up);
   canvas.addEventListener("pointercancel", up);
-  canvas.addEventListener("touchmove", e=>{ e.preventDefault(); }, {passive:false});
 
   window.addEventListener("keydown", e=>{
     if(!running || paused) return;
@@ -671,40 +609,7 @@ function attachInput(){
     if(e.key === "ArrowRight") tower.rotation += 0.09 * profile.settings.sensitivity;
   });
 }
-attachInput();
 
-/* ---- HUD buttons ---- */
-document.getElementById("btnPause").addEventListener("click", ()=>{
-  if(!running) return;
-  paused = true; Audio_.sfx.click(); showOverlay("overlay-pause");
-});
-document.getElementById("btnResume").addEventListener("click", ()=>{
-  paused = false; hideOverlay("overlay-pause"); Audio_.sfx.click(); lastTime = performance.now();
-});
-document.getElementById("btnRestartFromPause").addEventListener("click", ()=>{
-  hideOverlay("overlay-pause"); Audio_.sfx.click(); startGame(level.id);
-});
-document.getElementById("btnQuitToMenu").addEventListener("click", ()=>{
-  hideOverlay("overlay-pause"); running=false; Audio_.sfx.click();
-  refreshCoinDisplays(); showScreen("screen-menu");
-});
-document.getElementById("btnRestartFromGO").addEventListener("click", ()=>{
-  hideOverlay("overlay-gameover"); Audio_.sfx.click(); startGame(level.id);
-});
-document.getElementById("btnMenuFromGO").addEventListener("click", ()=>{
-  hideOverlay("overlay-gameover"); Audio_.sfx.click(); refreshCoinDisplays(); showScreen("screen-menu");
-});
-document.getElementById("btnNextLevel").addEventListener("click", ()=>{
-  hideOverlay("overlay-victory"); Audio_.sfx.click();
-  const idx = LEVELS.findIndex(l=>l.id===level.id);
-  const next = LEVELS[Math.min(idx+1, LEVELS.length-1)];
-  startGame(profile.unlockedLevels[next.id] ? next.id : level.id);
-});
-document.getElementById("btnMenuFromVic").addEventListener("click", ()=>{
-  hideOverlay("overlay-victory"); Audio_.sfx.click(); refreshCoinDisplays(); showScreen("screen-menu");
-});
-
-/* ---- Main loop ---- */
 function loop(now){
   rafId = requestAnimationFrame(loop);
   const dt = Math.min((now-lastTime)/16.6667, 2.2);
@@ -739,11 +644,9 @@ function update(dt){
 
   updateParticles(dt);
 
-  // trail
   trailPositions.unshift(ball.squash);
   if(trailPositions.length>6) trailPositions.pop();
 
-  // HUD
   document.getElementById("hudDepth").textContent = Math.max(0, runStats.ringsCleared) + "m";
   document.getElementById("hudCoins").textContent = runStats.coinsThisRun;
 }
@@ -753,7 +656,6 @@ function render(){
   const theme = currentTheme();
   const skin = currentSkin();
 
-  // background wash matching theme
   const bgGrad = ctx.createLinearGradient(0,0,0,cssH);
   bgGrad.addColorStop(0, theme.bg[0]+"55");
   bgGrad.addColorStop(1, theme.bg[1]+"33");
@@ -761,10 +663,9 @@ function render(){
   ctx.fillRect(0,0,cssW,cssH);
 
   ctx.save();
-  let shakeX=0, shakeY=0;
   if(cam.shakeMag){
-    shakeX = (Math.random()-0.5)*cam.shakeMag;
-    shakeY = (Math.random()-0.5)*cam.shakeMag;
+    const shakeX = (Math.random()-0.5)*cam.shakeMag;
+    const shakeY = (Math.random()-0.5)*cam.shakeMag;
     ctx.translate(shakeX, shakeY);
   }
 
@@ -774,7 +675,6 @@ function render(){
   const highQ = profile.settings.graphics === "high";
   const medQ = profile.settings.graphics !== "low";
 
-  // central pole glow
   ctx.save();
   ctx.globalAlpha = 0.25;
   const poleGrad = ctx.createLinearGradient(centerX-4,0,centerX+4,0);
@@ -783,7 +683,6 @@ function render(){
   ctx.fillRect(centerX-40, 0, 80, cssH);
   ctx.restore();
 
-  // draw rings back-to-front (further ones first): higher index = deeper = drawn first is fine since alpha blend simple
   const visibleRings = rings.filter(r=>{
     const sy = r.y - cam.offset;
     return sy > -80 && sy < cssH+80;
@@ -793,7 +692,6 @@ function render(){
     const sy = ring.y - cam.offset;
     ctx.save();
     ctx.translate(centerX, sy);
-    // faint full guide ellipse
     ctx.globalAlpha = 0.14;
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 1.5;
@@ -823,7 +721,6 @@ function render(){
       ctx.shadowBlur = 0;
     });
 
-    // coin marker
     if(ring.hasCoin && !ring.coinCollected){
       const ang = ring.gapMidAngle + tower.rotation;
       const cx = Math.cos(ang)*towerR*0.92;
@@ -841,10 +738,8 @@ function render(){
     ctx.restore();
   });
 
-  // particles (world space uses screen coords already since spawned at ball screen pos)
   drawParticles();
 
-  // ball trail (soft fading circles behind current squash state)
   const bx = centerX, by = cssH*0.32;
   if(medQ){
     for(let i=trailPositions.length-1;i>=1;i--){
@@ -858,7 +753,6 @@ function render(){
     ctx.globalAlpha = 1;
   }
 
-  // ball
   ctx.save();
   ctx.translate(bx, by);
   const stretch = Math.max(0.6, Math.min(1.5, ball.squash));
@@ -876,14 +770,15 @@ function render(){
   ctx.shadowBlur = 0;
   ctx.restore();
 
-  ctx.restore(); // end shake transform
+  ctx.restore();
 }
 
 /* ========================================================================
-   8. BACKGROUND PARTICLES (menu ambience, DOM-based, cheap)
+   8. BACKGROUND PARTICLES
    ======================================================================== */
 function spawnBgParticles(){
   const wrap = document.getElementById("bgParticles");
+  if(!wrap) return;
   const count = 22;
   for(let i=0;i<count;i++){
     const p = document.createElement("div");
@@ -901,15 +796,95 @@ function spawnBgParticles(){
 }
 
 /* ========================================================================
-   9. BOOT SEQUENCE
+   9. BOOT & BINDINGS SEQUENCE
    ======================================================================== */
+function initBindings(){
+  document.querySelectorAll("[data-back]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ Audio_.sfx.click(); showScreen(btn.getAttribute("data-back")); });
+  });
+
+  document.getElementById("toggleMusic").addEventListener("change", e=>{
+    profile.settings.music = e.target.checked; saveProfile();
+    if(e.target.checked) Audio_.startMusic(); else Audio_.stopMusic();
+  });
+  document.getElementById("toggleSound").addEventListener("change", e=>{ profile.settings.sound = e.target.checked; saveProfile(); });
+  document.getElementById("toggleVibration").addEventListener("change", e=>{ profile.settings.vibration = e.target.checked; saveProfile(); });
+  document.getElementById("sliderSensitivity").addEventListener("input", e=>{ profile.settings.sensitivity = parseFloat(e.target.value); saveProfile(); });
+  document.getElementById("sliderBrightness").addEventListener("input", e=>{
+    profile.settings.brightness = parseFloat(e.target.value); saveProfile();
+    document.documentElement.style.setProperty("--brightness", profile.settings.brightness);
+  });
+  document.querySelectorAll("#graphicsSeg button").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      profile.settings.graphics = b.dataset.val; saveProfile(); buildSettingsUI(); Audio_.sfx.click();
+    });
+  });
+  document.querySelectorAll("#langSeg button").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      profile.settings.language = b.dataset.val; saveProfile(); buildSettingsUI();
+      applyLanguage(profile.settings.language); buildStats(); Audio_.sfx.click();
+    });
+  });
+  document.getElementById("btnClaimDaily").addEventListener("click", ()=>{
+    const today = new Date().toDateString();
+    if(profile.lastDailyClaim === today) return;
+    profile.coins += 50; profile.totalCoinsEarned += 50; profile.lastDailyClaim = today;
+    saveProfile(); refreshCoinDisplays(); buildDailyScreen();
+    Audio_.sfx.coin(); Audio_.vibrate(40);
+  });
+
+  document.getElementById("btnPlay").addEventListener("click", ()=>{ Audio_.sfx.click(); startGame(lastPlayedLevel || "easy"); });
+  document.getElementById("btnLevels").addEventListener("click", ()=>{ Audio_.sfx.click(); buildLevelList(); showScreen("screen-levels"); });
+  document.getElementById("btnShop").addEventListener("click", ()=>{ Audio_.sfx.click(); buildBallGrid(); showScreen("screen-shop"); });
+  document.getElementById("btnThemes").addEventListener("click", ()=>{ Audio_.sfx.click(); buildThemeGrid(); showScreen("screen-themes"); });
+  document.getElementById("btnStats").addEventListener("click", ()=>{ Audio_.sfx.click(); buildStats(); showScreen("screen-stats"); });
+  document.getElementById("btnDaily").addEventListener("click", ()=>{ Audio_.sfx.click(); buildDailyScreen(); showScreen("screen-daily"); });
+  document.getElementById("btnSettings").addEventListener("click", ()=>{ Audio_.sfx.click(); buildSettingsUI(); showScreen("screen-settings"); });
+
+  document.getElementById("btnPause").addEventListener("click", ()=>{
+    if(!running) return;
+    paused = true; Audio_.sfx.click(); showOverlay("overlay-pause");
+  });
+  document.getElementById("btnResume").addEventListener("click", ()=>{
+    paused = false; hideOverlay("overlay-pause"); Audio_.sfx.click(); lastTime = performance.now();
+  });
+  document.getElementById("btnRestartFromPause").addEventListener("click", ()=>{
+    hideOverlay("overlay-pause"); Audio_.sfx.click(); startGame(level.id);
+  });
+  document.getElementById("btnQuitToMenu").addEventListener("click", ()=>{
+    hideOverlay("overlay-pause"); running=false; Audio_.sfx.click();
+    refreshCoinDisplays(); showScreen("screen-menu");
+  });
+  document.getElementById("btnRestartFromGO").addEventListener("click", ()=>{
+    hideOverlay("overlay-gameover"); Audio_.sfx.click(); startGame(level.id);
+  });
+  document.getElementById("btnMenuFromGO").addEventListener("click", ()=>{
+    hideOverlay("overlay-gameover"); Audio_.sfx.click(); refreshCoinDisplays(); showScreen("screen-menu");
+  });
+  document.getElementById("btnNextLevel").addEventListener("click", ()=>{
+    hideOverlay("overlay-victory"); Audio_.sfx.click();
+    const idx = LEVELS.findIndex(l=>l.id===level.id);
+    const next = LEVELS[Math.min(idx+1, LEVELS.length-1)];
+    startGame(profile.unlockedLevels[next.id] ? next.id : level.id);
+  });
+  document.getElementById("btnMenuFromVic").addEventListener("click", ()=>{
+    hideOverlay("overlay-victory"); Audio_.sfx.click(); refreshCoinDisplays(); showScreen("screen-menu");
+  });
+}
+
 function boot(){
+  canvas = document.getElementById("gameCanvas");
+  ctx = canvas.getContext("2d");
+  
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+  attachInput();
+  initBindings();
+
   spawnBgParticles();
   applyLanguage(profile.settings.language);
   buildSettingsUI();
   refreshCoinDisplays();
-
-  // unlock hard/expert cost display uses current values; nothing else needed pre-menu
 
   let pct = 0;
   const fill = document.getElementById("loaderFill");
@@ -918,22 +893,21 @@ function boot(){
     pct += 8 + Math.random()*14;
     if(pct>=100){
       pct = 100; clearInterval(iv);
-      fill.style.width = "100%";
-      txt.textContent = "Ready!";
+      if(fill) fill.style.width = "100%";
+      if(txt) txt.textContent = "Ready!";
       setTimeout(()=>{
         showScreen("screen-menu");
         refreshCoinDisplays();
       }, 350);
       return;
     }
-    fill.style.width = pct+"%";
+    if(fill) fill.style.width = pct+"%";
   }, 120);
 
-  // resume audio context on first user gesture (mobile autoplay policies)
   const resumeAudio = ()=>{ Audio_.ensureCtx(); window.removeEventListener("pointerdown", resumeAudio); };
   window.addEventListener("pointerdown", resumeAudio);
 }
 
-boot();
+document.addEventListener("DOMContentLoaded", boot);
 
 })();
