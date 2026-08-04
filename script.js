@@ -1,5 +1,5 @@
 /* =========================================================
-   HELIX STACK BALL ENGINE — Fully Corrected Script
+   HELIX STACK BALL ENGINE — Fully Corrected & Updated Script
    ========================================================= */
 
 // --- GLOBAL GAME STATE ---
@@ -13,14 +13,14 @@ const state = {
   isPaused: false,
   fireMode: false,
   fireStreak: 0,
-  
+
   // Customization & Shop Stats
   coins: parseInt(localStorage.getItem('helix_coins') || '100'),
   highScore: parseInt(localStorage.getItem('helix_highscore') || '0'),
   selectedBall: localStorage.getItem('helix_selected_ball') || 'default',
   selectedTheme: parseInt(localStorage.getItem('helix_selected_theme') || '0'),
   ownedBalls: JSON.parse(localStorage.getItem('helix_owned_balls') || '["default"]'),
-  
+
   // Settings
   musicEnabled: localStorage.getItem('helix_music') !== 'false',
   soundEnabled: localStorage.getItem('helix_sound') !== 'false',
@@ -165,7 +165,7 @@ let towerGroup, ballMesh;
 let stackPlatforms = [];
 let particles = [];
 
-// Physics & Mechanics Parameters (Scaled to Medium Speed)
+// Physics & Mechanics Parameters
 const GRAVITY = -0.007;
 const SMASH_SPEED = -0.18;
 const BOUNCE_IMPULSE = 0.14;
@@ -183,8 +183,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initThree();
   setupTouchAndInput();
   animate();
-  
-  // Fake splash screen loading
+
   let progress = 0;
   const interval = setInterval(() => {
     progress += 20;
@@ -204,7 +203,7 @@ function switchScreen(screenId) {
   if (target) {
     target.classList.add('active');
   }
-  
+
   if (screenId === 'screen-menu') {
     updateMenuStats();
   } else if (screenId === 'screen-shop') {
@@ -246,8 +245,7 @@ function translatePage() {
       if (el.tagName === 'INPUT' && el.type === 'button') {
         el.value = dict[key];
       } else {
-        const text = dict[key];
-        el.textContent = text;
+        el.textContent = dict[key];
       }
     }
   });
@@ -267,12 +265,12 @@ function renderLevels() {
   const container = document.getElementById('levelList');
   if (!container) return;
   container.innerHTML = '';
-  
+
   for (let i = 1; i <= 10; i++) {
     const isLocked = i > state.highestLevel;
     const card = document.createElement('div');
     card.className = `level-card ${isLocked ? 'locked' : ''}`;
-    
+
     card.innerHTML = `
       <div>
         <h3>Level ${i}</h3>
@@ -280,7 +278,7 @@ function renderLevels() {
       </div>
       <div class="level-badge">${isLocked ? '🔒' : '⭐'}</div>
     `;
-    
+
     if (!isLocked) {
       card.addEventListener('click', () => {
         state.currentLevel = i;
@@ -302,12 +300,12 @@ function renderShop() {
   BALL_SKINS.forEach(skin => {
     const isOwned = state.ownedBalls.includes(skin.id);
     const isSelected = state.selectedBall === skin.id;
-    
+
     const card = document.createElement('div');
     card.className = `item-card ${isSelected ? 'selected' : ''}`;
-    
+
     const hexStr = '#' + skin.color.toString(16).padStart(6, '0');
-    
+
     card.innerHTML = `
       <div class="item-preview-ball" style="background: radial-gradient(circle at 35% 30%, #fff, ${hexStr} 50%, #000 100%)"></div>
       <div class="item-name">${skin.name}</div>
@@ -351,7 +349,7 @@ function renderThemes() {
     const isSelected = state.selectedTheme === idx;
     const card = document.createElement('div');
     card.className = `item-card ${isSelected ? 'selected' : ''}`;
-    
+
     card.innerHTML = `
       <div class="item-preview-theme" style="background: linear-gradient(135deg, ${theme.sky}, ${theme.pink})"></div>
       <div class="item-name">${theme.name}</div>
@@ -388,7 +386,7 @@ function renderStatsPage() {
   const totalSmashed = document.getElementById('statTotalSmashed');
   const totalCoins = document.getElementById('statTotalCoins');
   const highestLevel = document.getElementById('statHighestLevel');
-  
+
   if (totalGames) totalGames.textContent = state.totalGames;
   if (totalSmashed) totalSmashed.textContent = state.totalSmashed;
   if (totalCoins) totalCoins.textContent = state.coins;
@@ -561,7 +559,7 @@ function initUI() {
       btn.classList.add('active');
       state.graphics = btn.getAttribute('data-val');
       localStorage.setItem('helix_graphics', state.graphics);
-      
+
       if (renderer) {
         if (state.graphics === 'low') renderer.setPixelRatio(0.75);
         else if (state.graphics === 'medium') renderer.setPixelRatio(1);
@@ -584,13 +582,13 @@ function initUI() {
     const claimBtn = document.getElementById('btnClaimDaily');
     const lastClaim = parseInt(localStorage.getItem('helix_last_claim') || '0');
     const now = Date.now();
-    
+
     if (now - lastClaim >= 86400000) {
       state.coins += 50;
       state.totalCoins += 50;
       localStorage.setItem('helix_last_claim', now.toString());
       saveToStorage();
-      
+
       const dict = TRANSLATIONS[state.lang] || TRANSLATIONS.en;
       if (claimBtn) {
         claimBtn.textContent = dict.alreadyClaimed || "Already Claimed";
@@ -627,7 +625,7 @@ function initThree() {
 
   renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  
+
   if (state.graphics === 'low') renderer.setPixelRatio(0.75);
   else if (state.graphics === 'medium') renderer.setPixelRatio(1);
   else renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -661,10 +659,11 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// --- TOUCH & POINTER CONTROLS (ROTATE & SMASH) ---
+/* =========================================================
+   UPDATED POINTER & TOUCH CONTROLS
+   ========================================================= */
 let isDragging = false;
 let previousPointerX = 0;
-let pointerMoved = 0;
 
 function setupTouchAndInput() {
   const canvas = document.getElementById('gameCanvas');
@@ -676,7 +675,6 @@ function setupTouchAndInput() {
 
     isDragging = true;
     previousPointerX = e.clientX;
-    pointerMoved = 0;
     state.isPressing = true;
   });
 
@@ -685,14 +683,9 @@ function setupTouchAndInput() {
 
     const deltaX = e.clientX - previousPointerX;
     previousPointerX = e.clientX;
-    pointerMoved += Math.abs(deltaX);
 
     const rotSensitivity = 0.006 * state.sensitivity;
     towerGroup.rotation.y -= deltaX * rotSensitivity;
-
-    if (pointerMoved > 8) {
-      state.isPressing = false;
-    }
   });
 
   const onPointerUp = () => {
@@ -736,14 +729,12 @@ function buildStackTower() {
     const sliceCount = 12;
     const slices = [];
 
-    // Ensure the starting layer i = 0 is 100% safe (no holes)
     const holeIndex1 = i > 0 ? Math.floor(Math.random() * sliceCount) : -1;
     const holeIndex2 = i > 0 ? (holeIndex1 + 1) % sliceCount : -1;
 
     for (let j = 0; j < sliceCount; j++) {
       if (j === holeIndex1 || j === holeIndex2) continue;
 
-      // Starting platform (i = 0) and victory base have NO danger zones!
       const isDanger = (i > 0) && !isBase && (j % 5 === 0 || j % 5 === 1);
 
       const angleStart = (j / sliceCount) * Math.PI * 2;
@@ -812,7 +803,7 @@ function startGame() {
 
   ballPosY = 1.0;
   ballVelocityY = 0;
-  
+
   updateBallMaterial();
   ballMesh.position.set(0, ballPosY, TOWER_RADIUS - 0.3);
 
@@ -821,6 +812,9 @@ function startGame() {
   updateHUD();
 }
 
+/* =========================================================
+   UPDATED PHYSICS & COLLISION ENGINE
+   ========================================================= */
 function updatePhysics() {
   if (!state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
 
@@ -832,8 +826,6 @@ function updatePhysics() {
 
   ballPosY += ballVelocityY;
 
-  towerGroup.rotation.y += 0.005;
-
   camera.position.y = ballPosY + 3.2;
   camera.lookAt(0, ballPosY - 0.5, 0);
 
@@ -844,12 +836,13 @@ function updatePhysics() {
     if (layer.destroyed) continue;
 
     if (ballVelocityY <= 0 && (ballPosY - BALL_RADIUS) <= layer.posY && (ballPosY - BALL_RADIUS) >= layer.posY - LAYER_HEIGHT) {
-      
+
       const slice = getSliceUnderBall(layer);
       if (!slice) {
         continue;
       }
-      
+
+      // SMASHING OR FEVER MODE
       if (state.isPressing || state.fireMode) {
         if (slice.isDanger && !state.fireMode) {
           triggerGameOver();
@@ -861,14 +854,14 @@ function updatePhysics() {
         state.fireStreak++;
         state.totalSmashed++;
 
-        if (state.fireStreak >= 8) {
+        if (state.fireStreak >= 8 && !state.fireMode) {
           state.fireMode = true;
           ballMesh.material.color.setHex(0xff3300);
           ballMesh.material.emissive.setHex(0x550000);
-          
+
           const combo = document.getElementById('comboPopup');
           if (combo) {
-            combo.textContent = `FEVER MODE ×${Math.floor(state.fireStreak / 4)}`;
+            combo.textContent = `FEVER MODE!`;
             combo.classList.add('show');
             setTimeout(() => combo.classList.remove('show'), 900);
           }
@@ -880,7 +873,9 @@ function updatePhysics() {
           triggerVictory();
           return;
         }
-      } else {
+      } 
+      // PASSIVE BOUNCE (NOT PRESSING)
+      else {
         if (slice.isDanger) {
           triggerGameOver();
           return;
@@ -890,7 +885,7 @@ function updatePhysics() {
         ballVelocityY = BOUNCE_IMPULSE;
         state.fireStreak = 0;
         state.fireMode = false;
-        
+
         updateBallMaterial();
         createBounceBurst(ballMesh.position.y);
       }
@@ -917,11 +912,6 @@ function getSliceUnderBall(layer) {
   });
 }
 
-function checkDangerHit(layer) {
-  const slice = getSliceUnderBall(layer);
-  return slice ? slice.isDanger : false;
-}
-
 function shatterStackLayer(layer) {
   layer.destroyed = true;
 
@@ -929,10 +919,10 @@ function shatterStackLayer(layer) {
     const mesh = s.mesh;
     const pGeo = mesh.geometry.clone();
     const pMat = mesh.material.clone();
-    
+
     pMat.transparent = true;
     pMat.opacity = 1.0;
-    
+
     const p = new THREE.Mesh(pGeo, pMat);
 
     p.position.copy(layer.group.position);
@@ -957,7 +947,7 @@ function shatterStackLayer(layer) {
 function createBounceBurst(posY) {
   const colors = [0xffffff, 0x00d2ff, 0x00ffff];
   const activeColor = colors[Math.floor(Math.random() * colors.length)];
-  
+
   for (let i = 0; i < 8; i++) {
     const pGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
     const pMat = new THREE.MeshStandardMaterial({
@@ -992,13 +982,13 @@ function updateParticles() {
     p.position.x += p.userData.vx;
     p.position.y += p.userData.vy;
     p.position.z += p.userData.vz;
-    
+
     p.rotation.x += p.userData.rotX || 0;
     p.rotation.y += p.userData.rotY || 0;
 
     p.userData.vy -= 0.008;
     p.userData.life--;
-    
+
     if (p.material) {
       p.material.opacity = Math.max(0, p.userData.life / 30);
     }
@@ -1025,11 +1015,11 @@ function updateHUD() {
 function triggerGameOver() {
   state.isPlaying = false;
   state.isGameOver = true;
-  
+
   if (state.score > state.highScore) {
     state.highScore = state.score;
   }
-  
+
   const earnedCoins = Math.floor(state.score / 10);
   state.coins += earnedCoins;
   state.totalCoins += earnedCoins;
@@ -1038,13 +1028,13 @@ function triggerGameOver() {
   const goDepth = document.getElementById('goDepth');
   const goCoins = document.getElementById('goCoins');
   const goBestMsg = document.getElementById('goBestMsg');
-  
+
   if (goDepth) goDepth.textContent = state.score;
   if (goCoins) goCoins.textContent = earnedCoins;
   if (goBestMsg) {
     goBestMsg.textContent = state.score >= state.highScore ? "🏆 New Personal Best!" : `Best: ${state.highScore}m`;
   }
-  
+
   document.getElementById('overlay-gameover').classList.add('active');
 }
 
@@ -1059,11 +1049,11 @@ function triggerVictory() {
   const prize = 50 + state.currentLevel * 10;
   state.coins += prize;
   state.totalCoins += prize;
-  
+
   if (state.currentLevel === state.highestLevel) {
     state.highestLevel = state.currentLevel + 1;
   }
-  
+
   saveToStorage();
 
   const vicCoins = document.getElementById('vicCoins');
@@ -1084,138 +1074,3 @@ function animate() {
     renderer.render(scene, camera);
   }
 }
-
-
-
-
-/* =========================================================
-   UPDATED POINTER & INPUT CONTROLS
-   ========================================================= */
-let isDragging = false;
-let previousPointerX = 0;
-
-function setupTouchAndInput() {
-  const canvas = document.getElementById('gameCanvas');
-  if (!canvas) return;
-
-  canvas.addEventListener('pointerdown', (e) => {
-    if (!state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
-    if (e.target.closest('.hud-btn') || e.target.closest('.hud-coins')) return;
-
-    isDragging = true;
-    previousPointerX = e.clientX;
-    state.isPressing = true; // Hold to smash
-  });
-
-  window.addEventListener('pointermove', (e) => {
-    if (!isDragging || !state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
-
-    const deltaX = e.clientX - previousPointerX;
-    previousPointerX = e.clientX;
-
-    // Rotate tower smoothly based on drag sensitivity
-    const rotSensitivity = 0.006 * state.sensitivity;
-    towerGroup.rotation.y -= deltaX * rotSensitivity;
-  });
-
-  const onPointerUp = () => {
-    isDragging = false;
-    state.isPressing = false; // Release smash when finger/mouse is lifted
-  };
-
-  window.addEventListener('pointerup', onPointerUp);
-  window.addEventListener('pointercancel', onPointerUp);
-}
-
-/* =========================================================
-   UPDATED PHYSICS & COLLISION ENGINE
-   ========================================================= */
-function updatePhysics() {
-  if (!state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
-
-  // Apply downward smash velocity or regular gravity
-  if (state.isPressing) {
-    ballVelocityY = SMASH_SPEED;
-  } else {
-    ballVelocityY += GRAVITY;
-  }
-
-  ballPosY += ballVelocityY;
-
-  // Camera follow
-  camera.position.y = ballPosY + 3.2;
-  camera.lookAt(0, ballPosY - 0.5, 0);
-  ballMesh.position.y = ballPosY;
-
-  // Platform collision check
-  for (let i = 0; i < stackPlatforms.length; i++) {
-    const layer = stackPlatforms[i];
-    if (layer.destroyed) continue;
-
-    // Detect when ball hits top of a layer
-    if (ballVelocityY <= 0 && (ballPosY - BALL_RADIUS) <= layer.posY && (ballPosY - BALL_RADIUS) >= layer.posY - LAYER_HEIGHT) {
-
-      const slice = getSliceUnderBall(layer);
-      
-      // Ball is falling through a gap
-      if (!slice) {
-        continue;
-      }
-
-      // --- CASE 1: SMASHING OR FEVER MODE ---
-      if (state.isPressing || state.fireMode) {
-        if (slice.isDanger && !state.fireMode) {
-          triggerGameOver(); // Hitting black while smashing (without fever) = Game Over
-          return;
-        }
-
-        // Destroy blue layer (or black layer if in fever mode)
-        shatterStackLayer(layer);
-        state.score += 10;
-        state.fireStreak++;
-        state.totalSmashed++;
-
-        // Trigger Fever / Super Mode
-        if (state.fireStreak >= 8 && !state.fireMode) {
-          state.fireMode = true;
-          ballMesh.material.color.setHex(0xff3300);
-          ballMesh.material.emissive.setHex(0x550000);
-
-          const combo = document.getElementById('comboPopup');
-          if (combo) {
-            combo.textContent = `FEVER MODE!`;
-            combo.classList.add('show');
-            setTimeout(() => combo.classList.remove('show'), 900);
-          }
-        }
-
-        updateHUD();
-
-        if (layer.isBase) {
-          triggerVictory();
-          return;
-        }
-      } 
-      // --- CASE 2: PASSIVE BOUNCING (IDLE / NOT PRESSING) ---
-      else {
-        if (slice.isDanger) {
-          triggerGameOver(); // Landing on black while idle = Game Over
-          return;
-        }
-
-        // Safe bounce on blue platform
-        ballPosY = layer.posY + BALL_RADIUS;
-        ballVelocityY = BOUNCE_IMPULSE;
-        state.fireStreak = 0;
-        state.fireMode = false;
-
-        updateBallMaterial();
-        createBounceBurst(ballMesh.position.y);
-      }
-      break;
-    }
-  }
-
-  updateParticles();
-}
-
