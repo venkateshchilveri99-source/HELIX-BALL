@@ -1,249 +1,306 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#7b2ff7">
-<title>Helix Drop — Premium Helix Jump</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-
-
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Helix Smash — JS Helix Tower Game</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    header { text-align: center; margin-bottom: 1rem; }
+    header h1 { font-size: 1.875rem; font-weight: 800; }
+    header p { font-size: 0.875rem; color: #94a3b8; margin-top: 0.25rem; }
+    .game-container {
+      position: relative;
+      width: 100%;
+      max-width: 384px;
+      aspect-ratio: 9 / 16;
+      border-radius: 1.5rem;
+      overflow: hidden;
+      border: 1px solid #334155;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    canvas { width: 100%; height: 100%; touch-action: none; user-select: none; }
+    .hud {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      display: flex; justify-content: space-between;
+      padding: 1rem; font-weight: bold; font-size: 0.875rem;
+      color: #fff; mix-blend-mode: difference; pointer-events: none;
+    }
+    .overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(2px);
+      text-align: center; gap: 0.5rem; pointer-events: none;
+    }
+    .overlay h2 { font-size: 1.5rem; font-weight: 800; }
+    .overlay p { max-width: 16rem; font-size: 0.875rem; opacity: 0.85; }
+    .overlay .btn-sub { margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+  </style>
 </head>
 <body>
-
-<!-- Ambient animated background shared by every screen -->
-<div class="bg-scene" aria-hidden="true">
-  <div class="bg-gradient"></div>
-  <div class="light-ray ray1"></div>
-  <div class="light-ray ray2"></div>
-  <div class="light-ray ray3"></div>
-  <div class="particles" id="bgParticles"></div>
-</div>
-
-<div id="app">
-
-  <!-- ============ SPLASH SCREEN ============ -->
-  <section id="screen-splash" class="screen active">
-    <div class="splash-wrap">
-      <div class="logo-orb">
-        <div class="logo-orb-core"></div>
-        <div class="logo-orb-ring"></div>
-      </div>
-      <h1 class="game-title">HELIX <span>DROP</span></h1>
-      <p class="tagline" data-i18n="tagline">Spin. Fall. Fly.</p>
-      <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
-      <p class="loader-text" id="loaderText">Loading…</p>
+  <header>
+    <h1>Helix Smash</h1>
+    <p>Drag to rotate · hold to smash · dodge the black blocks</p>
+  </header>
+  <div class="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div class="hud">
+      <span id="levelHud">LEVEL 1</span>
+      <span id="scoreHud">0</span>
     </div>
-  </section>
-
-  <!-- ============ MAIN MENU ============ -->
-  <section id="screen-menu" class="screen">
-    <div class="glass-panel menu-panel">
-      <h1 class="brand">HELIX <span>DROP</span></h1>
-
-      <div class="stat-row">
-        <div class="pill coin-pill">🪙 <span id="menuCoins">0</span></div>
-        <div class="pill score-pill">🏆 <span id="menuHigh">0</span></div>
-      </div>
-
-      <button class="btn btn-primary big" id="btnPlay" data-i18n="play">▶ PLAY</button>
-
-      <div class="menu-grid">
-        <button class="btn btn-glass" id="btnLevels">🗺️ <span data-i18n="levels">Levels</span></button>
-        <button class="btn btn-glass" id="btnShop">🎨 <span data-i18n="ballShop">Ball Shop</span></button>
-        <button class="btn btn-glass" id="btnThemes">🏙️ <span data-i18n="themes">Themes</span></button>
-        <button class="btn btn-glass" id="btnStats">📊 <span data-i18n="stats">Stats</span></button>
-        <button class="btn btn-glass" id="btnDaily">🎁 <span data-i18n="daily">Daily</span></button>
-        <button class="btn btn-glass" id="btnSettings">⚙️ <span data-i18n="settings">Settings</span></button>
-
-<
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ============ LEVEL SELECT ============ -->
-  <section id="screen-levels" class="screen">
-    <div class="glass-panel">
-      <div class="panel-header">
-        <button class="btn-back" data-back="screen-menu">←</button>
-        <h2 data-i18n="selectLevel">Select Level</h2>
-      </div>
-      <div class="level-list" id="levelList"></div>
-    </div>
-  </section>
-
-
-<!-- Settings Button on Main Menu -->
-<button id="btnSettings" class="menu-btn">Settings</button>
-
-<!-- Settings Modal / Screen -->
-<div id="screen-settings" class="screen">
-  <h2>Settings</h2>
-  <button id="btnCloseSettings" class="menu-btn">Close</button>
-</div>
-
-
-
-
-  <!-- ============ BALL SHOP ============ -->
-  <section id="screen-shop" class="screen">
-    <div class="glass-panel">
-      <div class="panel-header">
-        <button class="btn-back" data-back="screen-menu">←</button>
-        <h2 data-i18n="ballShop">Ball Shop</h2>
-        <div class="pill coin-pill small">🪙 <span id="shopCoins">0</span></div>
-      </div>
-      <div class="item-grid" id="ballGrid"></div>
-    </div>
-  </section>
-
-  <!-- ============ THEME SELECT ============ -->
-  <section id="screen-themes" class="screen">
-    <div class="glass-panel">
-      <div class="panel-header">
-        <button class="btn-back" data-back="screen-menu">←</button>
-        <h2 data-i18n="themes">Tower Themes</h2>
-        <div class="pill coin-pill small">🪙 <span id="themeCoins">0</span></div>
-      </div>
-      <div class="item-grid" id="themeGrid"></div>
-    </div>
-  </section>
-
-  <!-- ============ SETTINGS ============ -->
-  <section id="screen-settings" class="screen">
-    <div class="glass-panel">
-      <div class="panel-header">
-        <button class="btn-back" data-back="screen-menu">←</button>
-        <h2 data-i18n="settings">Settings</h2>
-      </div>
-      <div class="settings-list">
-        <div class="setting-row">
-          <span data-i18n="music">Music</span>
-          <label class="switch"><input type="checkbox" id="toggleMusic"><span class="slider-toggle"></span></label>
-        </div>
-        <div class="setting-row">
-          <span data-i18n="sound">Sound Effects</span>
-          <label class="switch"><input type="checkbox" id="toggleSound"><span class="slider-toggle"></span></label>
-        </div>
-        <div class="setting-row">
-          <span data-i18n="vibration">Vibration</span>
-          <label class="switch"><input type="checkbox" id="toggleVibration"><span class="slider-toggle"></span></label>
-        </div>
-        <div class="setting-row column">
-          <span data-i18n="graphics">Graphics Quality</span>
-          <div class="segmented" id="graphicsSeg">
-            <button data-val="low" data-i18n="low">Low</button>
-            <button data-val="medium" data-i18n="medium">Medium</button>
-            <button data-val="high" data-i18n="high">High</button>
-          </div>
-        </div>
-        <div class="setting-row column">
-          <span data-i18n="sensitivity">Sensitivity</span>
-          <input type="range" min="0.5" max="2" step="0.05" id="sliderSensitivity" class="range">
-        </div>
-        <div class="setting-row column">
-          <span data-i18n="brightness">Brightness</span>
-          <input type="range" min="0.6" max="1.3" step="0.02" id="sliderBrightness" class="range">
-        </div>
-        <div class="setting-row column">
-          <span data-i18n="language">Language</span>
-          <div class="segmented" id="langSeg">
-            <button data-val="en">EN</button>
-            <button data-val="es">ES</button>
-            <button data-val="hi">HI</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ DAILY REWARD ============ -->
-  <section id="screen-daily" class="screen">
-    <div class="glass-panel daily-panel">
-      <div class="panel-header">
-        <button class="btn-back" data-back="screen-menu">←</button>
-        <h2 data-i18n="dailyReward">Daily Reward</h2>
-      </div>
-      <div class="daily-chest" id="dailyChest">🎁</div>
-      <p class="daily-msg" id="dailyMsg">Come back tomorrow for more coins!</p>
-      <button class="btn btn-primary" id="btnClaimDaily" data-i18n="claim">CLAIM 50 🪙</button>
-    </div>
-  </section>
-
-  <!-- ============ STATISTICS ============ -->
-  <section id="screen-stats" class="screen">
-    <div class="glass-panel">
-      <div class="panel-header">
-        <button class="btn-back" data-back="screen-menu">←</button>
-        <h2 data-i18n="stats">Statistics</h2>
-      </div>
-      <div class="stats-grid" id="statsGrid"></div>
-      <h3 class="section-title" data-i18n="achievements">Achievements</h3>
-      <div class="achv-list" id="achvList"></div>
-    </div>
-  </section>
-
-  <!-- ============ GAMEPLAY ============ -->
-  <section id="screen-game" class="screen">
-    <div id="gameCanvasWrap">
-      <canvas id="gameCanvas"></canvas>
-
-      <!-- HUD -->
-      <div class="hud">
-        <button class="hud-btn" id="btnPause">❚❚</button>
-        <div class="hud-score">
-          <div class="hud-depth" id="hudDepth">0m</div>
-          <div class="hud-best" id="hudBest">Best 0m</div>
-        </div>
-        <div class="hud-coins">🪙 <span id="hudCoins">0</span></div>
-      </div>
-
-      <div class="combo-popup" id="comboPopup">COMBO ×2</div>
-    </div>
-  </section>
-
-  <!-- ============ PAUSE OVERLAY ============ -->
-  <div id="overlay-pause" class="overlay">
-    <div class="glass-panel overlay-panel">
-      <h2 data-i18n="paused">Paused</h2>
-      <button class="btn btn-primary" id="btnResume" data-i18n="resume">▶ Resume</button>
-      <button class="btn btn-glass" id="btnRestartFromPause" data-i18n="restart">⟲ Restart</button>
-      <button class="btn btn-glass" id="btnQuitToMenu" data-i18n="quit">🏠 Main Menu</button>
+    <div class="overlay" id="overlay">
+      <h2 id="titleText">Helix Smash</h2>
+      <p>Drag to rotate the tower, hold to smash. Avoid the black blocks.</p>
+      <p class="btn-sub" id="btnText">Tap to start</p>
     </div>
   </div>
 
-  <!-- ============ GAME OVER OVERLAY ============ -->
-  <div id="overlay-gameover" class="overlay">
-    <div class="glass-panel overlay-panel">
-      <h2 class="go-title" data-i18n="gameOver">Game Over</h2>
-      <div class="go-stats">
-        <div class="go-stat"><span id="goDepth">0</span>m <small data-i18n="depth">depth</small></div>
-        <div class="go-stat">🪙 <span id="goCoins">0</span></div>
-      </div>
-      <p class="go-best" id="goBestMsg"></p>
-      <button class="btn btn-primary" id="btnRestartFromGO" data-i18n="playAgain">⟲ Play Again</button>
-      <button class="btn btn-glass" id="btnMenuFromGO" data-i18n="quit">🏠 Main Menu</button>
-    </div>
-  </div>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const levelHud = document.getElementById("levelHud");
+    const scoreHud = document.getElementById("scoreHud");
+    const overlay = document.getElementById("overlay");
+    const titleText = document.getElementById("titleText");
+    const btnText = document.getElementById("btnText");
 
-  <!-- ============ VICTORY OVERLAY ============ -->
-  <div id="overlay-victory" class="overlay">
-    <div class="glass-panel overlay-panel">
-      <h2 class="victory-title" data-i18n="levelComplete">🎉 Level Complete!</h2>
-      <div class="go-stats">
-        <div class="go-stat">🪙 <span id="vicCoins">0</span></div>
-        <div class="go-stat">⭐ <span id="vicStars">☆☆☆</span></div>
-      </div>
-      <button class="btn btn-primary" id="btnNextLevel" data-i18n="nextLevel">Next Level →</button>
-      <button class="btn btn-glass" id="btnMenuFromVic" data-i18n="quit">🏠 Main Menu</button>
-    </div>
-  </div>
+    const SLOTS = 16, LEVELS = 60, LEVEL_GAP = 62, RX = 118, RY = 34, INNER = 0.34, THICK = 16, GRAVITY = 0.55, BOUNCE = -11, SMASH_SPEED = 17;
+    const PALETTES = [
+      { a: "#37d3f5", b: "#5ce6a5", block: "#2f6df6", dark: "#15171c" },
+      { a: "#ff8a3d", b: "#ff4f81", block: "#ffd400", dark: "#15171c" },
+      { a: "#7b5cff", b: "#ff7bd5", block: "#2ecc4a", dark: "#15171c" },
+      { a: "#ff5f4d", b: "#ffb43d", block: "#e6392b", dark: "#15171c" }
+    ];
 
-</div>
+    function shade(hex, amt) {
+      const n = parseInt(hex.replace("#", ""), 16);
+      const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+      return `rgb(${clamp(((n >> 16) & 255) * (1 + amt))},${clamp(((n >> 8) & 255) * (1 + amt))},${clamp((n & 255) * (1 + amt))})`;
+    }
 
-<script src="script.js"></script>
+    function makeLevels() {
+      const out = [];
+      for (let i = 0; i < LEVELS; i++) {
+        const slots = new Array(SLOTS).fill(1);
+        const holeSize = 3 + Math.floor(Math.random() * 2);
+        const holeStart = Math.floor(Math.random() * SLOTS);
+        for (let h = 0; h < holeSize; h++) slots[(holeStart + h) % SLOTS] = 0;
+        if (i > 2 && Math.random() < 0.75) {
+          const dSize = 2 + Math.floor(Math.random() * 3);
+          const dStart = Math.floor(Math.random() * SLOTS);
+          for (let d = 0; d < dSize; d++) {
+            const idx = (dStart + d) % SLOTS;
+            if (slots[idx] === 1) slots[idx] = 2;
+          }
+        }
+        out.push({ slots, destroyed: false });
+      }
+      out[out.length - 1].slots = new Array(SLOTS).fill(1);
+      return out;
+    }
+
+    let W = 0, H = 0;
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const r = canvas.getBoundingClientRect();
+      W = r.width; H = r.height;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    let levels = makeLevels(), rot = 0, rotVel = 0, ballY = -80, vy = 0, camY = -260;
+    let smashing = false, score = 0, cleared = 0, state = "ready", shake = 0;
+    const shards = [];
+    const pal = PALETTES[Math.floor(Math.random() * PALETTES.length)];
+
+    function updateDOM(newScore, newLevel, newState) {
+      scoreHud.textContent = newScore;
+      levelHud.textContent = `LEVEL ${newLevel}`;
+      if (newState === "play") {
+        overlay.style.display = "none";
+      } else {
+        overlay.style.display = "flex";
+        titleText.textContent = newState === "ready" ? "Helix Smash" : newState === "win" ? "You Win!" : "Game Over";
+        btnText.textContent = `Tap to ${newState === "ready" ? "start" : "retry"}`;
+      }
+    }
+
+    function reset() {
+      levels = makeLevels(); rot = 0; rotVel = 0; ballY = -80; vy = 0; camY = -260;
+      score = 0; cleared = 0; shards.length = 0; state = "play";
+      updateDOM(0, 1, "play");
+    }
+
+    let dragging = false, lastX = 0;
+    canvas.addEventListener("pointerdown", e => {
+      canvas.setPointerCapture(e.pointerId);
+      if (state !== "play") { reset(); return; }
+      dragging = true; lastX = e.clientX; smashing = true;
+    });
+    canvas.addEventListener("pointermove", e => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX; lastX = e.clientX;
+      rotVel = -dx * 0.012;
+      if (Math.abs(dx) > 12) smashing = false;
+    });
+    window.addEventListener("pointerup", () => { dragging = false; smashing = false; });
+
+    const cx = () => W / 2, baseY = () => H * 0.42, screenY = worldY => baseY() + (worldY - camY);
+    const frontSlot = () => {
+      const step = (Math.PI * 2) / SLOTS;
+      let a = Math.PI / 2 - rot;
+      a = ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      return Math.floor(a / step) % SLOTS;
+    };
+
+    const burst = (y, color) => {
+      for (let i = 0; i < 16; i++) {
+        shards.push({
+          x: cx() + (Math.random() - 0.5) * RX * 1.6, y: screenY(y),
+          vx: (Math.random() - 0.5) * 9, vy: -Math.random() * 6 - 1,
+          r: 4 + Math.random() * 7, c: color, life: 1
+        });
+      }
+    };
+
+    function drawSegment(yTop, from, to, color) {
+      const steps = 10;
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const a = from + ((to - from) * i) / steps;
+        ctx.lineTo(cx() + Math.cos(a) * RX, yTop + Math.sin(a) * RY);
+      }
+      for (let i = steps; i >= 0; i--) {
+        const a = from + ((to - from) * i) / steps;
+        ctx.lineTo(cx() + Math.cos(a) * RX, yTop + Math.sin(a) * RY + THICK);
+      }
+      ctx.closePath(); ctx.fillStyle = shade(color, -0.28); ctx.fill();
+
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const a = from + ((to - from) * i) / steps;
+        ctx.lineTo(cx() + Math.cos(a) * RX, yTop + Math.sin(a) * RY);
+      }
+      for (let i = steps; i >= 0; i--) {
+        const a = from + ((to - from) * i) / steps;
+        ctx.lineTo(cx() + Math.cos(a) * RX * INNER, yTop + Math.sin(a) * RY * INNER);
+      }
+      ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+    }
+
+    function drawPoleSlice(yTop, h) {
+      const r = RX * INNER;
+      const g = ctx.createLinearGradient(cx() - r, 0, cx() + r, 0);
+      g.addColorStop(0, "#d9dde3"); g.addColorStop(0.35, "#ffffff"); g.addColorStop(1, "#c3c9d2");
+      ctx.fillStyle = g; ctx.fillRect(cx() - r, yTop, r * 2, h);
+    }
+
+    function loop() {
+      rot += rotVel; rotVel *= 0.9; shake *= 0.85;
+      for (let i = shards.length - 1; i >= 0; i--) {
+        const p = shards[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.6; p.life -= 0.03;
+        if (p.life <= 0) shards.splice(i, 1);
+      }
+
+      if (state === "play") {
+        const prevY = ballY;
+        if (smashing) vy = Math.max(vy, SMASH_SPEED);
+        vy += GRAVITY; ballY += vy;
+
+        if (vy > 0) {
+          for (let li = 0; li < levels.length; li++) {
+            const lv = levels[li];
+            if (lv.destroyed) continue;
+            const ly = li * LEVEL_GAP;
+            if (prevY <= ly && ballY >= ly) {
+              const slot = lv.slots[frontSlot()];
+              if (slot === 0) break;
+              if (smashing) {
+                if (slot === 2) {
+                  state = "over"; shake = 14; burst(ly, pal.dark); updateDOM(score, cleared + 1, "over"); break;
+                }
+                lv.destroyed = true; cleared++; score += 10; shake = 8; burst(ly, pal.block); updateDOM(score, cleared + 1, "play"); continue;
+              }
+              if (slot === 2) {
+                state = "over"; shake = 14; updateDOM(score, cleared + 1, "over"); break;
+              }
+              ballY = ly - 1; vy = BOUNCE; break;
+            }
+          }
+        }
+        if (ballY > (levels.length - 1) * LEVEL_GAP + 40) {
+          state = "win"; updateDOM(score + 100, cleared, "win");
+        }
+        camY += (ballY - 120 - camY) * 0.12;
+      }
+
+      // Drawing
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, pal.a); g.addColorStop(1, pal.b);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+      drawPoleSlice(0, H);
+
+      const step = (Math.PI * 2) / SLOTS;
+      for (let li = 0; li < levels.length; li++) {
+        const lv = levels[li];
+        if (lv.destroyed) continue;
+        const y = screenY(li * LEVEL_GAP);
+        if (y < -60 || y > H + 60) continue;
+
+        const segs = [];
+        for (let s = 0; s < SLOTS; s++) {
+          if (lv.slots[s] === 0) continue;
+          const from = s * step + rot, to = from + step;
+          segs.push({ from, to, color: lv.slots[s] === 2 ? pal.dark : pal.block, depth: Math.sin((from + to) / 2) });
+        }
+        segs.sort((p, q) => p.depth - q.depth);
+        segs.forEach(s => drawSegment(y, s.from, s.to, s.color));
+      }
+
+      for (const p of shards) {
+        ctx.globalAlpha = Math.max(p.life, 0); ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.r, p.r * 0.6);
+      }
+      ctx.globalAlpha = 1;
+
+      const by = screenY(ballY), br = 15;
+      ctx.beginPath(); ctx.ellipse(cx(), by + br + 4, br * 0.9, 5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.fill();
+
+      const bg = ctx.createRadialGradient(cx() - 5, by - 6, 2, cx(), by, br);
+      bg.addColorStop(0, "#ffffff"); bg.addColorStop(0.35, "#6fd3ff"); bg.addColorStop(1, "#1274d8");
+      ctx.beginPath(); ctx.arc(cx(), by, br, 0, Math.PI * 2); ctx.fillStyle = bg; ctx.fill();
+
+      if (smashing && state === "play") {
+        ctx.beginPath();
+        ctx.moveTo(cx() - 9, by - 6);
+        ctx.lineTo(cx(), by - 40 - Math.random() * 14);
+        ctx.lineTo(cx() + 9, by - 6);
+        ctx.closePath(); ctx.fillStyle = "rgba(255,255,255,0.65)"; ctx.fill();
+      }
+      ctx.restore();
+
+      requestAnimationFrame(loop);
+    }
+    loop();
+  </script>
 </body>
 </html>
