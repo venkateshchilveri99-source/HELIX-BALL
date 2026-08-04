@@ -1084,3 +1084,138 @@ function animate() {
     renderer.render(scene, camera);
   }
 }
+
+
+
+
+/* =========================================================
+   UPDATED POINTER & INPUT CONTROLS
+   ========================================================= */
+let isDragging = false;
+let previousPointerX = 0;
+
+function setupTouchAndInput() {
+  const canvas = document.getElementById('gameCanvas');
+  if (!canvas) return;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
+    if (e.target.closest('.hud-btn') || e.target.closest('.hud-coins')) return;
+
+    isDragging = true;
+    previousPointerX = e.clientX;
+    state.isPressing = true; // Hold to smash
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!isDragging || !state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
+
+    const deltaX = e.clientX - previousPointerX;
+    previousPointerX = e.clientX;
+
+    // Rotate tower smoothly based on drag sensitivity
+    const rotSensitivity = 0.006 * state.sensitivity;
+    towerGroup.rotation.y -= deltaX * rotSensitivity;
+  });
+
+  const onPointerUp = () => {
+    isDragging = false;
+    state.isPressing = false; // Release smash when finger/mouse is lifted
+  };
+
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
+}
+
+/* =========================================================
+   UPDATED PHYSICS & COLLISION ENGINE
+   ========================================================= */
+function updatePhysics() {
+  if (!state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
+
+  // Apply downward smash velocity or regular gravity
+  if (state.isPressing) {
+    ballVelocityY = SMASH_SPEED;
+  } else {
+    ballVelocityY += GRAVITY;
+  }
+
+  ballPosY += ballVelocityY;
+
+  // Camera follow
+  camera.position.y = ballPosY + 3.2;
+  camera.lookAt(0, ballPosY - 0.5, 0);
+  ballMesh.position.y = ballPosY;
+
+  // Platform collision check
+  for (let i = 0; i < stackPlatforms.length; i++) {
+    const layer = stackPlatforms[i];
+    if (layer.destroyed) continue;
+
+    // Detect when ball hits top of a layer
+    if (ballVelocityY <= 0 && (ballPosY - BALL_RADIUS) <= layer.posY && (ballPosY - BALL_RADIUS) >= layer.posY - LAYER_HEIGHT) {
+
+      const slice = getSliceUnderBall(layer);
+      
+      // Ball is falling through a gap
+      if (!slice) {
+        continue;
+      }
+
+      // --- CASE 1: SMASHING OR FEVER MODE ---
+      if (state.isPressing || state.fireMode) {
+        if (slice.isDanger && !state.fireMode) {
+          triggerGameOver(); // Hitting black while smashing (without fever) = Game Over
+          return;
+        }
+
+        // Destroy blue layer (or black layer if in fever mode)
+        shatterStackLayer(layer);
+        state.score += 10;
+        state.fireStreak++;
+        state.totalSmashed++;
+
+        // Trigger Fever / Super Mode
+        if (state.fireStreak >= 8 && !state.fireMode) {
+          state.fireMode = true;
+          ballMesh.material.color.setHex(0xff3300);
+          ballMesh.material.emissive.setHex(0x550000);
+
+          const combo = document.getElementById('comboPopup');
+          if (combo) {
+            combo.textContent = `FEVER MODE!`;
+            combo.classList.add('show');
+            setTimeout(() => combo.classList.remove('show'), 900);
+          }
+        }
+
+        updateHUD();
+
+        if (layer.isBase) {
+          triggerVictory();
+          return;
+        }
+      } 
+      // --- CASE 2: PASSIVE BOUNCING (IDLE / NOT PRESSING) ---
+      else {
+        if (slice.isDanger) {
+          triggerGameOver(); // Landing on black while idle = Game Over
+          return;
+        }
+
+        // Safe bounce on blue platform
+        ballPosY = layer.posY + BALL_RADIUS;
+        ballVelocityY = BOUNCE_IMPULSE;
+        state.fireStreak = 0;
+        state.fireMode = false;
+
+        updateBallMaterial();
+        createBounceBurst(ballMesh.position.y);
+      }
+      break;
+    }
+  }
+
+  updateParticles();
+}
+
