@@ -1,5 +1,5 @@
-Import { createFileRoute } from "@tanstack/react-router";
-import HelixGame from "@/components/HelixGame";
+import { createFileRoute } from "@tanstack/react-router";
+import HelixGame from "./HelixGame";
 
 export const Route = createFileRoute("/")({
   head: () => ({
