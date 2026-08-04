@@ -125,7 +125,8 @@ function setupTouchAndInput() {
   });
 }
 
-// --- BUILD STACK TOWER ---
+
+// --- BUILD STACK TOWER (VOLUMETRIC 3D BLOCKS) ---
 function buildStackTower() {
   while (towerGroup.children.length > 0) {
     const obj = towerGroup.children[0];
@@ -135,43 +136,62 @@ function buildStackTower() {
   }
   stackPlatforms = [];
 
-  // Center Shaft
-  const poleGeo = new THREE.CylinderGeometry(0.6, 0.6, TOTAL_LAYERS * LAYER_HEIGHT + 10, 32);
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+  // Center Shaft (White Center Pole)
+  const poleGeo = new THREE.CylinderGeometry(0.7, 0.7, TOTAL_LAYERS * LAYER_HEIGHT + 10, 32);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
   const pole = new THREE.Mesh(poleGeo, poleMat);
   pole.position.y = -(TOTAL_LAYERS * LAYER_HEIGHT) / 2;
   towerGroup.add(pole);
 
-  // Palette selection per level
-  const colors = [0x39e6d0, 0xffb347, 0x58ffb0, 0xff5fb0];
-  const safeColor = colors[state.currentLevel % colors.length];
-  const dangerColor = 0x222222; // Dark black segments (danger)
+  // Colors matching the Stack Ball theme from your image
+  const themeColors = [0x0099ff, 0xffd700, 0x00e640, 0xff3300];
+  const safeColor = themeColors[state.currentLevel % themeColors.length];
+  const dangerColor = 0x1a1a1a; // Dark black segments from image
 
   for (let i = 0; i < TOTAL_LAYERS; i++) {
     const posY = -i * LAYER_HEIGHT;
-    const rotationY = (i * 0.25); // Spiral alignment
+    // Spiral twist angle for the stack layers
+    const rotationY = i * 0.18; 
     const isBase = i === TOTAL_LAYERS - 1;
 
     const layerGroup = new THREE.Group();
     layerGroup.position.y = posY;
     layerGroup.rotation.y = rotationY;
 
-    const sliceCount = 8;
+    const sliceCount = 12; // 12 thick blocks form a full ring
     const slices = [];
 
     for (let j = 0; j < sliceCount; j++) {
-      // 25% chance of black danger slice if not base level
-      const isDanger = !isBase && (j % 4 === 0);
+      // Create black danger blocks
+      const isDanger = !isBase && (j % 5 === 0 || j % 5 === 1);
       
-      // Arc piece geometry
-      const sliceGeo = new THREE.CylinderGeometry(
-        TOWER_RADIUS, TOWER_RADIUS, LAYER_HEIGHT * 0.85, 8, 1, false,
-        (j / sliceCount) * Math.PI * 2, (1 / sliceCount) * Math.PI * 2 - 0.05
-      );
+      const angleStart = (j / sliceCount) * Math.PI * 2;
+      const angleSize = (1 / sliceCount) * Math.PI * 2 - 0.04; // Gap between blocks
+
+      // Create thick curved 3D block geometry using ExtrudeGeometry
+      const shape = new THREE.Shape();
+      const innerR = 0.75;
+      const outerR = 1.85;
+
+      shape.absarc(0, 0, outerR, angleStart, angleStart + angleSize, false);
+      shape.absarc(0, 0, innerR, angleStart + angleSize, angleStart, true);
+
+      const extrudeSettings = {
+        depth: 0.28, // Height/Thickness of block
+        bevelEnabled: true,
+        bevelSegments: 2,
+        steps: 1,
+        bevelSize: 0.02,
+        bevelThickness: 0.02
+      };
+
+      const sliceGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      sliceGeo.rotateX(Math.PI / 2); // Rotate to lay horizontal
 
       const sliceMat = new THREE.MeshStandardMaterial({
         color: isDanger ? dangerColor : safeColor,
-        roughness: 0.2
+        roughness: 0.25,
+        metalness: 0.1
       });
 
       const sliceMesh = new THREE.Mesh(sliceGeo, sliceMat);
@@ -193,6 +213,7 @@ function buildStackTower() {
     });
   }
 }
+
 
 // --- GAME LOOP & MECHANICS ---
 function startGame() {
