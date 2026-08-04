@@ -44,6 +44,7 @@ html,body{
 #app{
   position: fixed; inset:0;
   filter: brightness(var(--brightness));
+  z-index: 10;
 }
 
 /* ---------------- Background scene ---------------- */
@@ -317,7 +318,7 @@ html,body{
 .combo-popup.show{ animation: comboPop .9s cubic-bezier(.2,1.5,.4,1) forwards; }
 @keyframes comboPop{
   0%{ opacity:0; transform: translate(-50%,-50%) scale(.3) rotate(-8deg); }
-  25%{ opacity:1; transform: translate(-50%,-50%) scale(1.15) rotate(3deg); }
+  25%{ opacity:1; transform: translate(-50%,-55%) scale(1.15) rotate(3deg); }
   70%{ opacity:1; transform: translate(-50%,-55%) scale(1) rotate(0); }
   100%{ opacity:0; transform: translate(-50%,-70%) scale(.9); }
 }
