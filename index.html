@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,9 +7,6 @@
 <meta name="theme-color" content="#7b2ff7">
 <title>Helix Drop — Premium Helix Jump</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-
-
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -57,12 +55,9 @@
         <button class="btn btn-glass" id="btnStats">📊 <span data-i18n="stats">Stats</span></button>
         <button class="btn btn-glass" id="btnDaily">🎁 <span data-i18n="daily">Daily</span></button>
         <button class="btn btn-glass" id="btnSettings">⚙️ <span data-i18n="settings">Settings</span></button>
-
-<
       </div>
     </div>
   </section>
-
 
   <!-- ============ LEVEL SELECT ============ -->
   <section id="screen-levels" class="screen">
@@ -74,19 +69,6 @@
       <div class="level-list" id="levelList"></div>
     </div>
   </section>
-
-
-<!-- Settings Button on Main Menu -->
-<button id="btnSettings" class="menu-btn">Settings</button>
-
-<!-- Settings Modal / Screen -->
-<div id="screen-settings" class="screen">
-  <h2>Settings</h2>
-  <button id="btnCloseSettings" class="menu-btn">Close</button>
-</div>
-
-
-
 
   <!-- ============ BALL SHOP ============ -->
   <section id="screen-shop" class="screen">
@@ -122,36 +104,36 @@
       <div class="settings-list">
         <div class="setting-row">
           <span data-i18n="music">Music</span>
-          <label class="switch"><input type="checkbox" id="toggleMusic"><span class="slider-toggle"></span></label>
+          <label class="switch"><input type="checkbox" id="toggleMusic" checked><span class="slider-toggle"></span></label>
         </div>
         <div class="setting-row">
           <span data-i18n="sound">Sound Effects</span>
-          <label class="switch"><input type="checkbox" id="toggleSound"><span class="slider-toggle"></span></label>
+          <label class="switch"><input type="checkbox" id="toggleSound" checked><span class="slider-toggle"></span></label>
         </div>
         <div class="setting-row">
           <span data-i18n="vibration">Vibration</span>
-          <label class="switch"><input type="checkbox" id="toggleVibration"><span class="slider-toggle"></span></label>
+          <label class="switch"><input type="checkbox" id="toggleVibration" checked><span class="slider-toggle"></span></label>
         </div>
         <div class="setting-row column">
           <span data-i18n="graphics">Graphics Quality</span>
           <div class="segmented" id="graphicsSeg">
-            <button data-val="low" data-i18n="low">Low</button>
-            <button data-val="medium" data-i18n="medium">Medium</button>
-            <button data-val="high" data-i18n="high">High</button>
+            <button data-val="low">Low</button>
+            <button data-val="medium" class="active">Medium</button>
+            <button data-val="high">High</button>
           </div>
         </div>
         <div class="setting-row column">
           <span data-i18n="sensitivity">Sensitivity</span>
-          <input type="range" min="0.5" max="2" step="0.05" id="sliderSensitivity" class="range">
+          <input type="range" min="0.5" max="2.0" step="0.05" value="1.0" id="sliderSensitivity" class="range">
         </div>
         <div class="setting-row column">
           <span data-i18n="brightness">Brightness</span>
-          <input type="range" min="0.6" max="1.3" step="0.02" id="sliderBrightness" class="range">
+          <input type="range" min="0.6" max="1.3" step="0.02" value="1.0" id="sliderBrightness" class="range">
         </div>
         <div class="setting-row column">
           <span data-i18n="language">Language</span>
           <div class="segmented" id="langSeg">
-            <button data-val="en">EN</button>
+            <button data-val="en" class="active">EN</button>
             <button data-val="es">ES</button>
             <button data-val="hi">HI</button>
           </div>
@@ -180,9 +162,48 @@
         <button class="btn-back" data-back="screen-menu">←</button>
         <h2 data-i18n="stats">Statistics</h2>
       </div>
-      <div class="stats-grid" id="statsGrid"></div>
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-box">
+          <b id="statTotalGames">0</b>
+          <span>Games Played</span>
+        </div>
+        <div class="stat-box">
+          <b id="statTotalSmashed">0</b>
+          <span>Layers Smashed</span>
+        </div>
+        <div class="stat-box">
+          <b id="statTotalCoins">0</b>
+          <span>Coins Earned</span>
+        </div>
+        <div class="stat-box">
+          <b id="statHighestLevel">1</b>
+          <span>Max Level</span>
+        </div>
+      </div>
       <h3 class="section-title" data-i18n="achievements">Achievements</h3>
-      <div class="achv-list" id="achvList"></div>
+      <div class="achv-list" id="achvList">
+        <div class="achv-item" id="achv-1">
+          <span class="achv-icon">🌟</span>
+          <div>
+            <b>First Steps</b>
+            <p>Reach level 2</p>
+          </div>
+        </div>
+        <div class="achv-item" id="achv-2">
+          <span class="achv-icon">🔥</span>
+          <div>
+            <b>Smasher</b>
+            <p>Smash 8 platforms in one hold</p>
+          </div>
+        </div>
+        <div class="achv-item" id="achv-3">
+          <span class="achv-icon">💰</span>
+          <div>
+            <b>Wealthy</b>
+            <p>Accumulate 500 coins</p>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
