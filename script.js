@@ -1,5 +1,5 @@
 /* =========================================================
-   HELIX STACK BALL ENGINE — Fixed Rod Rotation & Passive Bouncing
+   HELIX STACK BALL ENGINE — Fully Rotating Rod & Passive Touch
    ========================================================= */
 
 // --- GLOBAL GAME STATE ---
@@ -161,7 +161,7 @@ const TOWER_THEMES = [
 
 // --- THREE.JS GLOBALS ---
 let scene, camera, renderer;
-let towerGroup, ballMesh;
+let towerGroup, ballMesh, poleMesh;
 let stackPlatforms = [];
 let particles = [];
 
@@ -659,7 +659,7 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// --- FIXED TOUCH & INPUT CONTROLS ---
+// --- TOUCH & PASSIVE INPUT CONTROLS ---
 let isDragging = false;
 let previousPointerX = 0;
 
@@ -673,7 +673,7 @@ function setupTouchAndInput() {
 
     isDragging = true;
     previousPointerX = e.clientX;
-    state.isPressing = true;
+    state.isPressing = true; // Enables active smashing down
   });
 
   window.addEventListener('pointermove', (e) => {
@@ -688,11 +688,33 @@ function setupTouchAndInput() {
 
   const onPointerUp = () => {
     isDragging = false;
-    state.isPressing = false;
+    state.isPressing = false; // Reverts back to passive bounce state
   };
 
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
+}
+
+// --- PROCEDURAL TEXTURE FOR ROD VISUAL SPIN ---
+function createRodTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 256, 256);
+
+  ctx.fillStyle = '#dddddd';
+  for (let i = 0; i < 256; i += 32) {
+    ctx.fillRect(i, 0, 16, 256);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(4, 20);
+  return texture;
 }
 
 // --- BUILD STACK TOWER ---
@@ -705,11 +727,20 @@ function buildStackTower() {
   }
   stackPlatforms = [];
 
-  const poleGeo = new THREE.CylinderGeometry(0.7, 0.7, TOTAL_LAYERS * LAYER_HEIGHT + 10, 32);
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
-  const pole = new THREE.Mesh(poleGeo, poleMat);
-  pole.position.y = -(TOTAL_LAYERS * LAYER_HEIGHT) / 2;
-  towerGroup.add(pole);
+  // Central Rotating Rod Geometry & Material
+  const poleGeo = new THREE.CylinderGeometry(0.65, 0.65, TOTAL_LAYERS * LAYER_HEIGHT + 10, 32);
+  const poleMat = new THREE.MeshStandardMaterial({
+    color: 0xeeeeee,
+    roughness: 0.3,
+    metalness: 0.1,
+    map: createRodTexture()
+  });
+
+  poleMesh = new THREE.Mesh(poleGeo, poleMat);
+  poleMesh.position.y = -(TOTAL_LAYERS * LAYER_HEIGHT) / 2;
+  
+  // ATTACH ROD DIRECTLY TO TOWER GROUP FOR CONTINUOUS ROTATION
+  towerGroup.add(poleMesh);
 
   const currentTheme = TOWER_THEMES[state.selectedTheme] || TOWER_THEMES[0];
   const safeColor = currentTheme.safeColor;
@@ -739,7 +770,7 @@ function buildStackTower() {
       const angleSize = (1 / sliceCount) * Math.PI * 2 - 0.04;
 
       const shape = new THREE.Shape();
-      const innerR = 0.75;
+      const innerR = 0.7;
       const outerR = 1.85;
 
       shape.absarc(0, 0, outerR, angleStart, angleStart + angleSize, false);
@@ -810,13 +841,14 @@ function startGame() {
   updateHUD();
 }
 
-// --- FIXED PHYSICS & ROD ROTATION ENGINE ---
+// --- PHYSICS ENGINE: ROTATING ROD & PASSIVE BOUNCING ---
 function updatePhysics() {
   if (!state.isPlaying || state.isGameOver || state.isVictory || state.isPaused) return;
 
-  // FIXED: Continuous central rod/tower rotation
+  // CONTINUOUS ROTATION OF CENTRAL ROD AND PLATFORMS
   towerGroup.rotation.y += 0.005;
 
+  // PASSIVE vs ACTIVE PRESS PHYSICS
   if (state.isPressing) {
     ballVelocityY = SMASH_SPEED;
   } else {
@@ -841,7 +873,7 @@ function updatePhysics() {
         continue;
       }
 
-      // SMASHING / DOWNWARD SMASH
+      // ACTIVE SMASH MODE (PRESSED OR FEVER MODE)
       if (state.isPressing || state.fireMode) {
         if (slice.isDanger && !state.fireMode) {
           triggerGameOver();
@@ -873,7 +905,7 @@ function updatePhysics() {
           return;
         }
       } 
-      // FIXED: PASSIVE BOUNCE MECHANIC
+      // PASSIVE TOUCH / BOUNCE MODE (NOT PRESSING)
       else {
         if (slice.isDanger) {
           triggerGameOver();
@@ -881,7 +913,7 @@ function updatePhysics() {
         }
 
         ballPosY = layer.posY + BALL_RADIUS;
-        ballVelocityY = BOUNCE_IMPULSE;
+        ballVelocityY = BOUNCE_IMPULSE; // Passive bounce impulse upward
         state.fireStreak = 0;
         state.fireMode = false;
 
