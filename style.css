@@ -363,5 +363,10 @@ html,body{
   .menu-grid{ grid-template-columns: repeat(3,1fr); }
 }
 
+/* Guarantee inactive screens stay non-interactive */
+.screen:not(.active) {
+  pointer-events: none !important;
+}
+
 /* scrollbar hide */
 .glass-panel::-webkit-scrollbar{ width:0; }
