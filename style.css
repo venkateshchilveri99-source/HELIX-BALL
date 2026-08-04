@@ -368,5 +368,17 @@ html,body{
   pointer-events: none !important;
 }
 
+/* Ensure clicks register on the button container, not inner text/icons */
+button *, .hud-btn *, .menu-btn * {
+  pointer-events: none !important;
+}
+
+/* Make sure modal overlays sit on top and remain clickable */
+.screen.active, .overlay.active {
+  display: flex !important;
+  pointer-events: auto !important;
+  z-index: 1000 !important;
+}
+
 /* scrollbar hide */
 .glass-panel::-webkit-scrollbar{ width:0; }
