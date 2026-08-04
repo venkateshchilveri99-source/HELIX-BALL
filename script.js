@@ -736,13 +736,15 @@ function buildStackTower() {
     const sliceCount = 12;
     const slices = [];
 
+    // Ensure the starting layer i = 0 is 100% safe (no holes)
     const holeIndex1 = i > 0 ? Math.floor(Math.random() * sliceCount) : -1;
     const holeIndex2 = i > 0 ? (holeIndex1 + 1) % sliceCount : -1;
 
     for (let j = 0; j < sliceCount; j++) {
       if (j === holeIndex1 || j === holeIndex2) continue;
 
-      const isDanger = !isBase && (j % 5 === 0 || j % 5 === 1);
+      // Starting platform (i = 0) and victory base have NO danger zones!
+      const isDanger = (i > 0) && !isBase && (j % 5 === 0 || j % 5 === 1);
 
       const angleStart = (j / sliceCount) * Math.PI * 2;
       const angleSize = (1 / sliceCount) * Math.PI * 2 - 0.04;
