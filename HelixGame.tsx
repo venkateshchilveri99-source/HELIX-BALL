@@ -13,9 +13,9 @@ const RX = 118; // ellipse radius x
 const RY = 34; // ellipse radius y
 const INNER = 0.34; // pole radius as fraction of RX
 const THICK = 16; // platform extrusion height
-const GRAVITY = 0.55;
-const BOUNCE = -11;
-const SMASH_SPEED = 17;
+const GRAVITY = 0.35; // Scaled to Medium Speed
+const BOUNCE = -8.5; // Scaled to Medium Speed
+const SMASH_SPEED = 11; // Scaled to Medium Speed
 
 type Slot = 0 | 1 | 2; // 0 = hole, 1 = platform, 2 = deadly
 
@@ -191,7 +191,6 @@ export default function HelixGame() {
 
     // ---- drawing ----
     const drawSegment = (yTop: number, from: number, to: number, color: string) => {
-      // side (extruded) face
       ctx.beginPath();
       const steps = 10;
       for (let i = 0; i <= steps; i++) {
@@ -211,7 +210,6 @@ export default function HelixGame() {
       ctx.fillStyle = shade(color, -0.28);
       ctx.fill();
 
-      // top face
       ctx.beginPath();
       for (let i = 0; i <= steps; i++) {
         const a = from + ((to - from) * i) / steps;
@@ -242,7 +240,6 @@ export default function HelixGame() {
     };
 
     const draw = () => {
-      // background
       const g = ctx.createLinearGradient(0, 0, 0, H);
       g.addColorStop(0, pal.a);
       g.addColorStop(1, pal.b);
@@ -252,7 +249,6 @@ export default function HelixGame() {
       ctx.save();
       if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
-      // pole behind everything
       drawPoleSlice(0, H);
 
       const step = (Math.PI * 2) / SLOTS;
@@ -284,7 +280,6 @@ export default function HelixGame() {
         front.forEach((s) => drawSegment(y, s.from, s.to, s.color));
       }
 
-      // shards
       for (const p of shards) {
         ctx.save();
         ctx.globalAlpha = Math.max(p.life, 0);
@@ -293,7 +288,6 @@ export default function HelixGame() {
         ctx.restore();
       }
 
-      // ball
       const by = screenY(ballY);
       const br = 15;
       ctx.beginPath();
@@ -309,7 +303,6 @@ export default function HelixGame() {
       ctx.fillStyle = bg;
       ctx.fill();
 
-      // smash flame
       if (smashing && state === "play") {
         ctx.beginPath();
         ctx.moveTo(cx() - 9, by - 6);
@@ -323,7 +316,6 @@ export default function HelixGame() {
       ctx.restore();
     };
 
-    // ---- update ----
     const update = () => {
       rot += rotVel;
       rotVel *= 0.9;
@@ -352,7 +344,7 @@ export default function HelixGame() {
           const ly = li * LEVEL_GAP;
           if (prevY <= ly && ballY >= ly) {
             const slot = lv.slots[frontSlot()];
-            if (slot === 0) break; // through the hole
+            if (slot === 0) break;
             if (smashing) {
               if (slot === 2) {
                 state = "over";
@@ -375,7 +367,6 @@ export default function HelixGame() {
               setHud({ score, level: cleared + 1, state: "over" });
               return;
             }
-            // bounce
             ballY = ly - 1;
             vy = BOUNCE;
             break;
