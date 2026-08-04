@@ -1,17 +1,24 @@
-import { useEffect, useRef } from "react";
+Import { useEffect, useRef, useState } from "react";
 
-const SLOTS = 16;
+/* ------------------------------------------------------------------ *
+ * Helix / Stack-Ball tower game — pure canvas 2D, no dependencies.
+ * Drag left/right to rotate the tower, hold to smash through platforms.
+ * Black segments kill you.
+ * ------------------------------------------------------------------ */
+
+const SLOTS = 16; // angular slots per ring
 const LEVELS = 60;
 const LEVEL_GAP = 62;
-const RX = 118;
-const RY = 34;
-const INNER = 0.34;
-const THICK = 16;
+const RX = 118; // ellipse radius x
+const RY = 34; // ellipse radius y
+const INNER = 0.34; // pole radius as fraction of RX
+const THICK = 16; // platform extrusion height
 const GRAVITY = 0.55;
 const BOUNCE = -11;
 const SMASH_SPEED = 17;
 
 type Slot = 0 | 1 | 2; // 0 = hole, 1 = platform, 2 = deadly
+
 type Level = { slots: Slot[]; destroyed: boolean };
 
 const PALETTES = [
@@ -54,11 +61,7 @@ function makeLevels(): Level[] {
 
 export default function HelixGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const levelRef = useRef<HTMLSpanElement>(null);
-  const scoreRef = useRef<HTMLSpanElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const buttonTextRef = useRef<HTMLParagraphElement>(null);
+  const [hud, setHud] = useState({ score: 0, level: 1, state: "ready" as "ready" | "play" | "over" | "win" });
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -79,10 +82,11 @@ export default function HelixGame() {
     resize();
     window.addEventListener("resize", resize);
 
+    // ---- game state ----
     let levels = makeLevels();
     let rot = 0;
     let rotVel = 0;
-    let ballY = -80;
+    let ballY = -80; // world y (down positive)
     let vy = 0;
     let camY = -260;
     let smashing = false;
@@ -92,21 +96,6 @@ export default function HelixGame() {
     let shake = 0;
     const shards: { x: number; y: number; vx: number; vy: number; r: number; c: string; life: number }[] = [];
     const pal = PALETTES[Math.floor(Math.random() * PALETTES.length)]!;
-
-    const updateDOM = (newScore: number, newLevel: number, newState: typeof state) => {
-      if (scoreRef.current) scoreRef.current.textContent = `${newScore}`;
-      if (levelRef.current) levelRef.current.textContent = `LEVEL ${newLevel}`;
-      if (overlayRef.current && titleRef.current && buttonTextRef.current) {
-        if (newState === "play") {
-          overlayRef.current.style.display = "none";
-        } else {
-          overlayRef.current.style.display = "flex";
-          titleRef.current.textContent =
-            newState === "ready" ? "Helix Smash" : newState === "win" ? "You Win!" : "Game Over";
-          buttonTextRef.current.textContent = `Tap to ${newState === "ready" ? "start" : "retry"}`;
-        }
-      }
-    };
 
     const reset = () => {
       levels = makeLevels();
@@ -119,26 +108,30 @@ export default function HelixGame() {
       cleared = 0;
       shards.length = 0;
       state = "play";
-      updateDOM(0, 1, "play");
+      setHud({ score: 0, level: 1, state: "play" });
     };
 
+    // ---- input ----
     let dragging = false;
     let lastX = 0;
+    let moved = 0;
     const down = (x: number) => {
-      if (state !== "play") {
+      if (state === "over" || state === "win" || state === "ready") {
         reset();
         return;
       }
       dragging = true;
       lastX = x;
+      moved = 0;
       smashing = true;
     };
     const move = (x: number) => {
       if (!dragging) return;
       const dx = x - lastX;
       lastX = x;
+      moved += Math.abs(dx);
       rotVel = -dx * 0.012;
-      if (Math.abs(dx) > 12) smashing = false;
+      if (moved > 8) smashing = false;
     };
     const up = () => {
       dragging = false;
@@ -169,10 +162,12 @@ export default function HelixGame() {
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKeyUp);
 
+    // ---- helpers ----
     const cx = () => W / 2;
     const baseY = () => H * 0.42;
     const screenY = (worldY: number) => baseY() + (worldY - camY);
 
+    // index of slot currently under the ball (front of tower = angle PI/2)
     const frontSlot = () => {
       const step = (Math.PI * 2) / SLOTS;
       let a = Math.PI / 2 - rot;
@@ -194,7 +189,20 @@ export default function HelixGame() {
       }
     };
 
+    // ---- drawing ----
+    const ringPath = (yTop: number, from: number, to: number, radius: number) => {
+      ctx.beginPath();
+      const steps = 10;
+      for (let i = 0; i <= steps; i++) {
+        const a = from + ((to - from) * i) / steps;
+        const x = cx() + Math.cos(a) * radius;
+        const y = yTop + Math.sin(a) * RY;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+    };
+
     const drawSegment = (yTop: number, from: number, to: number, color: string) => {
+      // side (extruded) face
       ctx.beginPath();
       const steps = 10;
       for (let i = 0; i <= steps; i++) {
@@ -209,6 +217,7 @@ export default function HelixGame() {
       ctx.fillStyle = shade(color, -0.28);
       ctx.fill();
 
+      // top face
       ctx.beginPath();
       for (let i = 0; i <= steps; i++) {
         const a = from + ((to - from) * i) / steps;
@@ -234,6 +243,7 @@ export default function HelixGame() {
     };
 
     const draw = () => {
+      // background
       const g = ctx.createLinearGradient(0, 0, 0, H);
       g.addColorStop(0, pal.a);
       g.addColorStop(1, pal.b);
@@ -243,6 +253,7 @@ export default function HelixGame() {
       ctx.save();
       if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
+      // pole behind everything
       drawPoleSlice(0, H);
 
       const step = (Math.PI * 2) / SLOTS;
@@ -269,11 +280,12 @@ export default function HelixGame() {
         segs.sort((p, q) => p.depth - q.depth);
         const back = segs.filter((s) => s.depth < 0);
         const front = segs.filter((s) => s.depth >= 0);
-
         back.forEach((s) => drawSegment(y, s.from, s.to, s.color));
+        drawPoleSlice(y - RY, RY * 2 + THICK);
         front.forEach((s) => drawSegment(y, s.from, s.to, s.color));
       }
 
+      // shards
       for (const p of shards) {
         ctx.globalAlpha = Math.max(p.life, 0);
         ctx.fillStyle = p.c;
@@ -281,13 +293,13 @@ export default function HelixGame() {
       }
       ctx.globalAlpha = 1;
 
+      // ball
       const by = screenY(ballY);
       const br = 15;
       ctx.beginPath();
       ctx.ellipse(cx(), by + br + 4, br * 0.9, 5, 0, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(0,0,0,0.18)";
       ctx.fill();
-
       const bg = ctx.createRadialGradient(cx() - 5, by - 6, 2, cx(), by, br);
       bg.addColorStop(0, "#ffffff");
       bg.addColorStop(0.35, "#6fd3ff");
@@ -297,6 +309,7 @@ export default function HelixGame() {
       ctx.fillStyle = bg;
       ctx.fill();
 
+      // smash flame
       if (smashing && state === "play") {
         ctx.beginPath();
         ctx.moveTo(cx() - 9, by - 6);
@@ -310,6 +323,7 @@ export default function HelixGame() {
       ctx.restore();
     };
 
+    // ---- update ----
     const update = () => {
       rot += rotVel;
       rotVel *= 0.9;
@@ -338,13 +352,13 @@ export default function HelixGame() {
           const ly = li * LEVEL_GAP;
           if (prevY <= ly && ballY >= ly) {
             const slot = lv.slots[frontSlot()];
-            if (slot === 0) break;
+            if (slot === 0) break; // through the hole
             if (smashing) {
               if (slot === 2) {
                 state = "over";
                 shake = 14;
                 burst(ly, pal.dark);
-                updateDOM(score, cleared + 1, "over");
+                setHud({ score, level: cleared + 1, state: "over" });
                 return;
               }
               lv.destroyed = true;
@@ -352,15 +366,16 @@ export default function HelixGame() {
               score += 10;
               shake = 8;
               burst(ly, pal.block);
-              updateDOM(score, cleared + 1, "play");
+              setHud({ score, level: cleared + 1, state: "play" });
               continue;
             }
             if (slot === 2) {
               state = "over";
               shake = 14;
-              updateDOM(score, cleared + 1, "over");
+              setHud({ score, level: cleared + 1, state: "over" });
               return;
             }
+            // bounce
             ballY = ly - 1;
             vy = BOUNCE;
             break;
@@ -370,7 +385,7 @@ export default function HelixGame() {
 
       if (ballY > (levels.length - 1) * LEVEL_GAP + 40) {
         state = "win";
-        updateDOM(score + 100, cleared, "win");
+        setHud({ score: score + 100, level: cleared, state: "win" });
       }
 
       const targetCam = ballY - 120;
@@ -400,24 +415,23 @@ export default function HelixGame() {
       <canvas ref={canvasRef} className="h-full w-full touch-none select-none" />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-4 text-sm font-bold text-foreground/90 mix-blend-difference">
-        <span ref={levelRef}>LEVEL 1</span>
-        <span ref={scoreRef}>0</span>
+        <span>LEVEL {hud.level}</span>
+        <span>{hud.score}</span>
       </div>
 
-      <div
-        ref={overlayRef}
-        className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-foreground/40 text-center backdrop-blur-[2px]"
-      >
-        <h2 ref={titleRef} className="text-2xl font-extrabold text-background">
-          Helix Smash
-        </h2>
-        <p className="max-w-[16rem] text-sm text-background/85">
-          Drag to rotate the tower, hold to smash. Avoid the black blocks.
-        </p>
-        <p ref={buttonTextRef} className="mt-2 text-xs font-semibold uppercase tracking-widest text-background/70">
-          Tap to start
-        </p>
-      </div>
+      {hud.state !== "play" && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-foreground/40 text-center backdrop-blur-[2px]">
+          <h2 className="text-2xl font-extrabold text-background">
+            {hud.state === "ready" ? "Helix Smash" : hud.state === "win" ? "You Win!" : "Game Over"}
+          </h2>
+          <p className="max-w-[16rem] text-sm text-background/85">
+            Drag to rotate the tower, hold to smash. Avoid the black blocks.
+          </p>
+          <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-background/70">
+            Tap to {hud.state === "ready" ? "start" : "retry"}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
