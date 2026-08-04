@@ -375,6 +375,32 @@ function triggerVictory() {
   document.getElementById('overlay-victory').classList.add('active');
 }
 
+function initUI() {
+  // Use currentTarget to always grab the button element, even if inner text was clicked
+  const bindClick = (id, handler) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handler(e);
+      });
+    }
+  };
+
+  // Bind settings, play, and menu buttons
+  bindClick('btnSettings', () => switchScreen('screen-settings'));
+  bindClick('btnCloseSettings', () => switchScreen('screen-menu'));
+  bindClick('btnPlay', startGame);
+  bindClick('btnRestartFromGO', () => { hideOverlays(); startGame(); });
+  bindClick('btnNextLevel', () => {
+    state.currentLevel++;
+    hideOverlays();
+    startGame();
+  });
+}
+
+
 // --- RENDER LOOP ---
 function animate() {
   requestAnimationFrame(animate);
