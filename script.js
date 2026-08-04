@@ -1,5 +1,5 @@
 /* =========================================================
-   HELIX STACK BALL ENGINE — Updated Script
+   HELIX STACK BALL ENGINE — Fully Corrected Script
    ========================================================= */
 
 // --- GLOBAL GAME STATE ---
@@ -110,7 +110,6 @@ function onWindowResize() {
 
 // --- TOUCH & POINTER CONTROLS ---
 function setupTouchAndInput() {
-  // Bind global screen listeners to eliminate unresponsive touch zones
   window.addEventListener('pointerdown', (e) => {
     if (!state.isPlaying || state.isGameOver || state.isVictory) return;
     state.isPressing = true;
@@ -124,7 +123,6 @@ function setupTouchAndInput() {
     state.isPressing = false;
   });
 }
-
 
 // --- BUILD STACK TOWER (VOLUMETRIC 3D BLOCKS) ---
 function buildStackTower() {
@@ -143,14 +141,13 @@ function buildStackTower() {
   pole.position.y = -(TOTAL_LAYERS * LAYER_HEIGHT) / 2;
   towerGroup.add(pole);
 
-  // Colors matching the Stack Ball theme from your image
+  // Theme Colors
   const themeColors = [0x0099ff, 0xffd700, 0x00e640, 0xff3300];
   const safeColor = themeColors[state.currentLevel % themeColors.length];
-  const dangerColor = 0x1a1a1a; // Dark black segments from image
+  const dangerColor = 0x1a1a1a;
 
   for (let i = 0; i < TOTAL_LAYERS; i++) {
     const posY = -i * LAYER_HEIGHT;
-    // Spiral twist angle for the stack layers
     const rotationY = i * 0.18; 
     const isBase = i === TOTAL_LAYERS - 1;
 
@@ -158,17 +155,15 @@ function buildStackTower() {
     layerGroup.position.y = posY;
     layerGroup.rotation.y = rotationY;
 
-    const sliceCount = 12; // 12 thick blocks form a full ring
+    const sliceCount = 12;
     const slices = [];
 
     for (let j = 0; j < sliceCount; j++) {
-      // Create black danger blocks
       const isDanger = !isBase && (j % 5 === 0 || j % 5 === 1);
-      
-      const angleStart = (j / sliceCount) * Math.PI * 2;
-      const angleSize = (1 / sliceCount) * Math.PI * 2 - 0.04; // Gap between blocks
 
-      // Create thick curved 3D block geometry using ExtrudeGeometry
+      const angleStart = (j / sliceCount) * Math.PI * 2;
+      const angleSize = (1 / sliceCount) * Math.PI * 2 - 0.04;
+
       const shape = new THREE.Shape();
       const innerR = 0.75;
       const outerR = 1.85;
@@ -177,7 +172,7 @@ function buildStackTower() {
       shape.absarc(0, 0, innerR, angleStart + angleSize, angleStart, true);
 
       const extrudeSettings = {
-        depth: 0.28, // Height/Thickness of block
+        depth: 0.28,
         bevelEnabled: true,
         bevelSegments: 2,
         steps: 1,
@@ -186,7 +181,9 @@ function buildStackTower() {
       };
 
       const sliceGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-      sliceGeo.rotateX(Math.PI / 2); // Rotate to lay horizontal
+      
+      // Fixed rotation to align with top surface facing +Y
+      sliceGeo.rotateX(-Math.PI / 2);
 
       const sliceMat = new THREE.MeshStandardMaterial({
         color: isDanger ? dangerColor : safeColor,
@@ -214,7 +211,6 @@ function buildStackTower() {
   }
 }
 
-
 // --- GAME LOOP & MECHANICS ---
 function startGame() {
   state.isPlaying = true;
@@ -237,16 +233,15 @@ function startGame() {
 function updatePhysics() {
   if (!state.isPlaying || state.isGameOver || state.isVictory) return;
 
-  // Touch action physics processing
   if (state.isPressing) {
-    ballVelocityY = SMASH_SPEED; // Constant downward smash force
+    ballVelocityY = SMASH_SPEED;
   } else {
-    ballVelocityY += GRAVITY; // Normal freefall gravity
+    ballVelocityY += GRAVITY;
   }
 
   ballPosY += ballVelocityY;
 
-  // Constant slow rotation of entire tower
+  // Tower Rotation
   towerGroup.rotation.y += 0.015;
 
   // Camera Follow
@@ -255,17 +250,15 @@ function updatePhysics() {
 
   ballMesh.position.y = ballPosY;
 
-  // Collision detection with current stack layer
+  // Layer Collision Loop
   for (let i = 0; i < stackPlatforms.length; i++) {
     const layer = stackPlatforms[i];
     if (layer.destroyed) continue;
 
     const diffY = ballPosY - layer.posY;
 
-    // Check layer collision boundary
     if (diffY <= BALL_RADIUS) {
       if (state.isPressing || state.fireMode) {
-        // Continuous Smash Logic
         const hitDanger = checkDangerHit(layer);
 
         if (hitDanger && !state.fireMode) {
@@ -273,7 +266,6 @@ function updatePhysics() {
           return;
         }
 
-        // Shatter Layer
         shatterStackLayer(layer);
         state.score += 10;
         state.fireStreak++;
@@ -290,7 +282,6 @@ function updatePhysics() {
           return;
         }
       } else {
-        // Bounce off top layer
         ballPosY = layer.posY + BALL_RADIUS;
         ballVelocityY = BOUNCE_IMPULSE;
         state.fireStreak = 0;
@@ -304,28 +295,34 @@ function updatePhysics() {
   updateParticles();
 }
 
+// --- FIXED HIT DETECTION ---
 function checkDangerHit(layer) {
-  // Angle alignment check against black danger blocks
-  const angleNorm = ((-layer.group.rotation.y - towerGroup.rotation.y) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-  const sliceAngle = (Math.PI * 2) / layer.slices.length;
-  const index = Math.floor(angleNorm / sliceAngle) % layer.slices.length;
-  
+  const totalRotation = towerGroup.rotation.y + layer.group.rotation.y;
+
+  // Ball is located at front (+Z axis, Math.PI / 2 angle)
+  let angleNorm = (Math.PI / 2 - totalRotation) % (Math.PI * 2);
+  if (angleNorm < 0) angleNorm += Math.PI * 2;
+
+  const sliceCount = layer.slices.length;
+  const sliceAngle = (Math.PI * 2) / sliceCount;
+
+  const index = Math.floor(angleNorm / sliceAngle) % sliceCount;
+
   return layer.slices[index] ? layer.slices[index].isDanger : false;
 }
 
 function shatterStackLayer(layer) {
   layer.destroyed = true;
-  
+
   layer.slices.forEach(s => {
     const mesh = s.mesh;
-    // Explode pieces outwards
     const pGeo = mesh.geometry.clone();
     const pMat = mesh.material.clone();
     const p = new THREE.Mesh(pGeo, pMat);
-    
+
     p.position.copy(layer.group.position);
     p.rotation.copy(layer.group.rotation);
-    
+
     p.userData = {
       vx: (Math.random() - 0.5) * 0.3,
       vy: Math.random() * 0.2 + 0.1,
