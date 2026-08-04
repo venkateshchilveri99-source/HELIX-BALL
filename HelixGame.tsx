@@ -1,4 +1,4 @@
-Import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /* ------------------------------------------------------------------ *
  * Helix / Stack-Ball tower game — pure canvas 2D, no dependencies.
@@ -190,28 +190,22 @@ export default function HelixGame() {
     };
 
     // ---- drawing ----
-    const ringPath = (yTop: number, from: number, to: number, radius: number) => {
-      ctx.beginPath();
-      const steps = 10;
-      for (let i = 0; i <= steps; i++) {
-        const a = from + ((to - from) * i) / steps;
-        const x = cx() + Math.cos(a) * radius;
-        const y = yTop + Math.sin(a) * RY;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      }
-    };
-
     const drawSegment = (yTop: number, from: number, to: number, color: string) => {
       // side (extruded) face
       ctx.beginPath();
       const steps = 10;
       for (let i = 0; i <= steps; i++) {
         const a = from + ((to - from) * i) / steps;
-        ctx.lineTo(cx() + Math.cos(a) * RX, yTop + Math.sin(a) * RY);
+        const x = cx() + Math.cos(a) * RX;
+        const y = yTop + Math.sin(a) * RY;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
       for (let i = steps; i >= 0; i--) {
         const a = from + ((to - from) * i) / steps;
-        ctx.lineTo(cx() + Math.cos(a) * RX, yTop + Math.sin(a) * RY + THICK);
+        const x = cx() + Math.cos(a) * RX;
+        const y = yTop + Math.sin(a) * RY + THICK;
+        ctx.lineTo(x, y);
       }
       ctx.closePath();
       ctx.fillStyle = shade(color, -0.28);
@@ -221,11 +215,16 @@ export default function HelixGame() {
       ctx.beginPath();
       for (let i = 0; i <= steps; i++) {
         const a = from + ((to - from) * i) / steps;
-        ctx.lineTo(cx() + Math.cos(a) * RX, yTop + Math.sin(a) * RY);
+        const x = cx() + Math.cos(a) * RX;
+        const y = yTop + Math.sin(a) * RY;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
       for (let i = steps; i >= 0; i--) {
         const a = from + ((to - from) * i) / steps;
-        ctx.lineTo(cx() + Math.cos(a) * RX * INNER, yTop + Math.sin(a) * RY * INNER);
+        const x = cx() + Math.cos(a) * RX * INNER;
+        const y = yTop + Math.sin(a) * RY * INNER;
+        ctx.lineTo(x, y);
       }
       ctx.closePath();
       ctx.fillStyle = color;
@@ -287,11 +286,12 @@ export default function HelixGame() {
 
       // shards
       for (const p of shards) {
+        ctx.save();
         ctx.globalAlpha = Math.max(p.life, 0);
         ctx.fillStyle = p.c;
         ctx.fillRect(p.x, p.y, p.r, p.r * 0.6);
+        ctx.restore();
       }
-      ctx.globalAlpha = 1;
 
       // ball
       const by = screenY(ballY);
