@@ -1107,4 +1107,3 @@ function animate() {
   }
 }
 
-Summary of the change: only the passive (not‑pressing) collision branch inside updatePhysics() was touched — it no longer calls triggerGameOver() for danger slices. It now always bounces the ball, just like it does for safe slices. Game over now fires exclusively from the active‑press branch (if (state.isPressing || state.fireMode)), so it only happens the instant you're pressing down and the ball meets a black slice — exactly as you asked.
