@@ -433,6 +433,40 @@ function loadSettingsPage() {
   });
 }
 
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    initUI();
+    initThree();
+    setupTouchAndInput();
+    animate();
+  } catch (err) {
+    console.error('Init failed:', err);
+    const loaderText = document.getElementById('loaderText');
+    if (loaderText) {
+      loaderText.textContent = 'INIT ERROR: ' + err.message;
+      loaderText.style.color = '#ff5555';
+      loaderText.style.fontSize = '12px';
+      loaderText.style.wordBreak = 'break-all';
+      loaderText.style.padding = '0 16px';
+    }
+  }
+
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 20;
+    const loader = document.getElementById('loaderFill');
+    if (loader) loader.style.width = `${progress}%`;
+    if (progress >= 100) {
+      clearInterval(interval);
+      switchScreen('screen-menu');
+    }
+  }, 150);
+});
+
+
+
+
+
 // --- INIT UI EVENT HANDLERS ---
 function initUI() {
   const bindClick = (id, handler) => {
