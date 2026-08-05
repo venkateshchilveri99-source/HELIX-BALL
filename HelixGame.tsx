@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 /* ------------------------------------------------------------------ *
  * Helix / Stack-Ball tower game — pure canvas 2D, no dependencies.
  * Drag left/right to rotate the tower, hold to smash through platforms.
- * Black segments kill you.
+ * Black segments only kill you if you SMASH into them — passive contact
+ * always just bounces the ball off, regardless of segment color.
  * ------------------------------------------------------------------ */
 
 const SLOTS = 16; // angular slots per ring
@@ -345,6 +346,9 @@ export default function HelixGame() {
           if (prevY <= ly && ballY >= ly) {
             const slot = lv.slots[frontSlot()];
             if (slot === 0) break;
+
+            // ACTIVE SMASH: game over only happens here, only while
+            // the player is actively holding/pressing to smash down.
             if (smashing) {
               if (slot === 2) {
                 state = "over";
@@ -361,12 +365,10 @@ export default function HelixGame() {
               setHud({ score, level: cleared + 1, state: "play" });
               continue;
             }
-            if (slot === 2) {
-              state = "over";
-              shake = 14;
-              setHud({ score, level: cleared + 1, state: "over" });
-              return;
-            }
+
+            // PASSIVE CONTACT (not smashing): NEVER ends the game,
+            // regardless of whether the slot is deadly (2) or a normal
+            // platform (1) — the ball just bounces off either way.
             ballY = ly - 1;
             vy = BOUNCE;
             break;
