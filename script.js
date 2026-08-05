@@ -905,7 +905,7 @@ function updatePhysics() {
           return;
         }
       }
-      // PASSIVE TOUCH / BOUNCE MODE (NOT PRESSING)
+      //  PASSIVE TOUCH / BOUNCE MODE (NOT PRESSING)
       // FIX: Passive contact must NEVER trigger game over — regardless of
       // whether the slice under the ball is a danger (black) slice or a
       // safe slice. The ball should just bounce normally on its own.
