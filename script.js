@@ -108,7 +108,7 @@ const TRANSLATIONS = {
     alreadyClaimed: "Ya reclamado"
   },
   hi: {
-    tagline: "घूमें। गिरें। उड़ें।",
+    tagline: "घूमें। गिरें। उड़ें।",
     play: "▶ खेलें",
     levels: "स्तर",
     ballShop: "गेंद दुकान",
@@ -738,7 +738,7 @@ function buildStackTower() {
 
   poleMesh = new THREE.Mesh(poleGeo, poleMat);
   poleMesh.position.y = -(TOTAL_LAYERS * LAYER_HEIGHT) / 2;
-  
+
   // ATTACH ROD DIRECTLY TO TOWER GROUP FOR CONTINUOUS ROTATION
   towerGroup.add(poleMesh);
 
@@ -904,14 +904,15 @@ function updatePhysics() {
           triggerVictory();
           return;
         }
-      } 
+      }
       // PASSIVE TOUCH / BOUNCE MODE (NOT PRESSING)
+      // FIX: Passive contact must NEVER trigger game over — regardless of
+      // whether the slice under the ball is a danger (black) slice or a
+      // safe slice. The ball should just bounce normally on its own.
+      // Game over is ONLY allowed to fire from the ACTIVE press branch
+      // above, i.e. only when the player is pressing/smashing AND the
+      // ball lands on a black slice at that exact moment.
       else {
-        if (slice.isDanger) {
-          triggerGameOver();
-          return;
-        }
-
         ballPosY = layer.posY + BALL_RADIUS;
         ballVelocityY = BOUNCE_IMPULSE; // Passive bounce impulse upward
         state.fireStreak = 0;
@@ -1105,3 +1106,5 @@ function animate() {
     renderer.render(scene, camera);
   }
 }
+
+Summary of the change: only the passive (not‑pressing) collision branch inside updatePhysics() was touched — it no longer calls triggerGameOver() for danger slices. It now always bounces the ball, just like it does for safe slices. Game over now fires exclusively from the active‑press branch (if (state.isPressing || state.fireMode)), so it only happens the instant you're pressing down and the ball meets a black slice — exactly as you asked.
